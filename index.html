@@ -454,10 +454,9 @@ banner.addEventListener('click',()=>{   // tap the answer banner to REVEAL: deco
   renderCfg();
   if(lastAnswer){ banner.textContent=lastAnswer; fitBanner(lastAnswer); speakNow(lastAnswer); }
 });
-document.querySelector('.logo').addEventListener('click',()=>{   // tap the logo to HIDE: decoy mode ON (tap again while hidden to cycle the category)
+document.querySelector('.logo').addEventListener('click',()=>{   // tap the logo to HIDE (decoy mode ON) — nothing else
   ttsPrimed=true;
-  if(cfg.showAnswer){ cfg.showAnswer=false; }
-  else { decoyIdx=(decoyIdx+1)%DECOYS.length; cfg.decoy=DECOYS[decoyIdx]; }
+  cfg.showAnswer=false;
   renderCfg(); try{localStorage.setItem('gcc',JSON.stringify(cfg));}catch(e){}
 });
 pin.addEventListener('click',()=>{ primeTTS(); sheet.classList.add('open'); });
