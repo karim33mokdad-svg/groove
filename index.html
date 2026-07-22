@@ -447,10 +447,17 @@ window.addEventListener('pointerup',endHold);
 connect.addEventListener('pointercancel',endHold);
 connect.addEventListener('contextmenu',e=>e.preventDefault());
 
-banner.addEventListener('click',()=>{ ttsPrimed=true; if(lastAnswer) speakNow(lastAnswer); });  // tap banner to hear it again (gesture = reliable)
-document.querySelector('.logo').addEventListener('click',()=>{   // tap logo to cycle the decoy category
-  primeTTS();
-  decoyIdx=(decoyIdx+1)%DECOYS.length; cfg.decoy=DECOYS[decoyIdx];
+banner.addEventListener('click',()=>{   // tap the answer banner to REVEAL: decoy mode OFF + show & speak the answer
+  ttsPrimed=true;
+  cfg.showAnswer=true;
+  try{localStorage.setItem('gcc',JSON.stringify(cfg));}catch(e){}
+  renderCfg();
+  if(lastAnswer){ banner.textContent=lastAnswer; fitBanner(lastAnswer); speakNow(lastAnswer); }
+});
+document.querySelector('.logo').addEventListener('click',()=>{   // tap the logo to HIDE: decoy mode ON (tap again while hidden to cycle the category)
+  ttsPrimed=true;
+  if(cfg.showAnswer){ cfg.showAnswer=false; }
+  else { decoyIdx=(decoyIdx+1)%DECOYS.length; cfg.decoy=DECOYS[decoyIdx]; }
   renderCfg(); try{localStorage.setItem('gcc',JSON.stringify(cfg));}catch(e){}
 });
 pin.addEventListener('click',()=>{ primeTTS(); sheet.classList.add('open'); });
