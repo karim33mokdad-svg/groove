@@ -308,7 +308,7 @@ function localSearch(qRaw){
 async function aiSearch(q){
   const provider = cfg.provider, key = (cfg.apikey||"").trim();
   if(provider==="none" || !key) return null;
-  const sys = "You are a 1970s quiz expert. Answer with ONLY the direct answer in 6 words or fewer. No explanation, no full sentence. If a year is asked, give just the year.";
+  const sys = "You are a precise quiz expert. Answer with ONLY the direct answer in 6 words or fewer — no explanation, no full sentence. If the question names a specific year or era, answer correctly for that time; otherwise give the present-day fact. If a year is asked, reply with just the year.";
   try{
     if(provider==="groq" || provider==="openai"){
       const url = provider==="groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
