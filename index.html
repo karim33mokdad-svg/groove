@@ -114,6 +114,7 @@
         <option value="1.1">Normal</option>
       </select>
       <span class="tg on" id="tgVoice">🔊 Earphone voice ON</span>
+      <span class="tg" id="testVoice" style="margin-left:8px">🎧 Test voice</span>
       <label class="fld" style="margin-top:16px">Answer mode</label>
       <div class="seg">
         <div class="segbtn" id="modeShow">Show answer + 🔊</div>
@@ -361,20 +362,28 @@ loadVoices();
 setInterval(()=>{ try{ if(speechSynthesis.speaking) speechSynthesis.resume(); }catch(e){} }, 4000);
 function unlock(){ try{ const w=new SpeechSynthesisUtterance(""); w.volume=0; speechSynthesis.speak(w); speechSynthesis.resume(); loadVoices(); }catch(e){} }
 function primeTTS(){ if(ttsPrimed) return; ttsPrimed=true; unlock(); }
+function speakNow(text){   // speak immediately — use inside a user gesture (most reliable on iOS)
+  if(!text) return;
+  try{ speechSynthesis.cancel(); speechSynthesis.resume();
+    const u=new SpeechSynthesisUtterance(text); u.rate=cfg.rate; u.pitch=1; u.volume=1;
+    speechSynthesis.speak(u); setTimeout(()=>{try{speechSynthesis.resume();}catch(e){}},50);
+  }catch(e){}
+}
 function speak(text){
   if(!cfg.voice||!text) return;
   const run=(attempt)=>{ try{
     if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel();
+    speechSynthesis.resume();
     const u=new SpeechSynthesisUtterance(text);
-    u.rate=cfg.rate; u.pitch=1; u.volume=1; u.lang="en-US";
-    const vs=speechSynthesis.getVoices()||[]; const en=vs.find(v=>/^en[-_]/i.test(v.lang)); if(en) u.voice=en;
+    u.rate=cfg.rate; u.pitch=1; u.volume=1;
     let started=false; u.onstart=()=>{ started=true; };
     speechSynthesis.speak(u);
-    setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} }, 40);
-    /* iOS sometimes silently drops the first attempt after the mic — retry once */
-    if(attempt<2){ setTimeout(()=>{ if(!started && !speechSynthesis.speaking) run(attempt+1); }, 350); }
+    setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} }, 50);
+    /* iOS often drops the first attempt right after the mic — retry a few times */
+    if(attempt<3){ setTimeout(()=>{ if(!started && !speechSynthesis.speaking) run(attempt+1); }, 400); }
   }catch(e){} };
-  setTimeout(()=>run(1), 160);
+  /* wait for the mic's audio session to fully hand back to playback */
+  setTimeout(()=>run(1), 380);
 }
 function fitBanner(t){ const n=(t||"").length; banner.style.fontSize = n<=9?"34px": n<=15?"28px": n<=24?"22px": n<=36?"17px":"14px"; }
 
@@ -411,6 +420,8 @@ function initRecog(){
   recog.onend=()=>{
     if(holding){ try{recog.start();}catch(_){}; return; }  // still holding → keep listening
     const q=(finalText||interimText).trim();
+    try{ recog.onresult=recog.onerror=recog.onend=null; }catch(_){}
+    recog=null;   // fully release the mic/audio session so the voice can use the speaker
     if(q) answerQuestion(q);
     else { connect.classList.remove('rec','think'); connect.textContent="Connect"; }
   };
@@ -420,6 +431,7 @@ function beginHold(ev){ ev.preventDefault(); if(holding) return; holding=true;
   finalText=""; interimText=""; qline.textContent="";
   connect.classList.remove('think'); connect.classList.add('rec'); connect.textContent="LISTENING";
   if(cfg.showAnswer){ banner.textContent="…"; banner.style.fontSize="34px"; }
+  if(!recog) initRecog();   // fresh recognition each time (old one was torn down to free audio)
   if(recog){ try{recog.start();}catch(_){ try{recog.stop();}catch(e){} setTimeout(()=>{try{recog.start();}catch(e){}},150);} }
 }
 function endHold(ev){ if(!holding) return; if(ev&&ev.preventDefault) ev.preventDefault(); holding=false;
@@ -435,7 +447,7 @@ window.addEventListener('pointerup',endHold);
 connect.addEventListener('pointercancel',endHold);
 connect.addEventListener('contextmenu',e=>e.preventDefault());
 
-banner.addEventListener('click',()=>{ primeTTS(); if(lastAnswer) speak(lastAnswer); });  // tap banner to hear it again
+banner.addEventListener('click',()=>{ ttsPrimed=true; if(lastAnswer) speakNow(lastAnswer); });  // tap banner to hear it again (gesture = reliable)
 document.querySelector('.logo').addEventListener('click',()=>{   // tap logo to cycle the decoy category
   primeTTS();
   decoyIdx=(decoyIdx+1)%DECOYS.length; cfg.decoy=DECOYS[decoyIdx];
@@ -445,6 +457,7 @@ pin.addEventListener('click',()=>{ primeTTS(); sheet.classList.add('open'); });
 sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
 $("save").addEventListener('click',()=>{ saveCfg(); renderCfg(); sheet.classList.remove('open'); });
 $("tgVoice").addEventListener('click',()=>{ cfg.voice=!cfg.voice; saveCfg(); renderCfg(); });
+$("testVoice").addEventListener('click',()=>{ ttsPrimed=true; speakNow("Sound is working. Steven Spielberg."); });
 $("modeShow").addEventListener('click',()=>{ cfg.showAnswer=true; saveCfg(); renderCfg(); });
 $("modeStealth").addEventListener('click',()=>{ cfg.showAnswer=false; saveCfg(); renderCfg(); });
 $("srcKb").addEventListener('click',()=>{ cfg.kbFirst=true; saveCfg(); renderCfg(); });
