@@ -70,6 +70,10 @@
   .tg{display:inline-block;margin-top:12px;padding:11px 16px;border-radius:11px;font-size:13px;font-weight:700;
     background:#242424;border:1px solid #3a3a3a;color:#9a9a9a;cursor:pointer;}
   .tg.on{color:#37e6a4;border-color:rgba(55,230,164,.5);}
+  .seg{display:flex;gap:8px;margin-top:6px;}
+  .segbtn{flex:1;text-align:center;padding:12px 8px;border-radius:11px;font-size:13px;font-weight:700;
+    background:#242424;border:1px solid #3a3a3a;color:#9a9a9a;cursor:pointer;}
+  .segbtn.on{color:#1c1c1c;background:#f4b45f;border-color:#f4b45f;}
   .save{width:100%;margin-top:18px;border:none;border-radius:12px;padding:15px;font-weight:800;font-size:16px;
     color:#1c1c1c;background:#f4b45f;}
   .note{font-size:12px;color:#9a9a9a;line-height:1.5;margin-top:12px;}
@@ -82,7 +86,7 @@
     <div class="band bottom"></div>
     <div class="ver">5.6.24</div>
     <div class="logo"><span class="lines"><i></i><i></i><i></i></span><b>SpeedQuizzing</b></div>
-    <div class="banner" id="banner">READY</div>
+    <div class="banner" id="banner">FRENCH FRIES</div>
     <div class="connect" id="connect">Connect</div>
     <div class="qline" id="qline"></div>
     <div class="pin" id="pin">PIN</div>
@@ -109,6 +113,13 @@
         <option value="1.1">Normal</option>
       </select>
       <span class="tg on" id="tgVoice">🔊 Earphone voice ON</span>
+      <label class="fld" style="margin-top:16px">Answer mode</label>
+      <div class="seg">
+        <div class="segbtn" id="modeShow">Show answer + 🔊</div>
+        <div class="segbtn" id="modeStealth">Decoy + 🔊 only</div>
+      </div>
+      <label class="fld">Decoy word (shown in stealth — set it to the real round so a glance looks normal)</label>
+      <input id="decoy" placeholder="FRENCH FRIES" autocomplete="off">
       <label class="fld" style="margin-top:16px">Manual question (backup if the mic misfires)</label>
       <div class="mrow"><input id="manualq" placeholder="Type a question…" autocomplete="off"><button id="mgo">GO</button></div>
       <button class="save" id="save">Save &amp; close</button>
@@ -302,16 +313,22 @@ async function aiSearch(q){
 }
 
 /* ---- config (this device only) ---- */
-const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35};
+const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35, showAnswer:true, decoy:"FRENCH FRIES"};
 const $ = id=>document.getElementById(id);
 const banner=$("banner"), connect=$("connect"), qline=$("qline"), pin=$("pin"), sheet=$("sheet");
-function loadCfg(){
-  try{const s=JSON.parse(localStorage.getItem("gcc")||"{}");Object.assign(cfg,s);}catch(e){}
+function bannerRest(){ const d=cfg.decoy||"FRENCH FRIES"; banner.textContent=d; fitBanner(d); }
+function renderCfg(){
   $("provider").value=cfg.provider; $("apikey").value=cfg.apikey; $("rate").value=String(cfg.rate);
+  $("decoy").value=cfg.decoy;
   $("tgVoice").classList.toggle("on",cfg.voice); $("tgVoice").textContent=cfg.voice?"🔊 Earphone voice ON":"🔇 Earphone voice OFF";
+  $("modeShow").classList.toggle("on",cfg.showAnswer);
+  $("modeStealth").classList.toggle("on",!cfg.showAnswer);
+  bannerRest();
 }
+function loadCfg(){ try{const s=JSON.parse(localStorage.getItem("gcc")||"{}");Object.assign(cfg,s);}catch(e){} renderCfg(); }
 function saveCfg(){
   cfg.provider=$("provider").value; cfg.apikey=$("apikey").value; cfg.rate=parseFloat($("rate").value);
+  cfg.decoy=($("decoy").value.trim()||"FRENCH FRIES");
   try{localStorage.setItem("gcc",JSON.stringify(cfg));}catch(e){}
 }
 
@@ -337,7 +354,7 @@ function fitBanner(t){ const n=(t||"").length; banner.style.fontSize = n<=9?"34p
 /* ---- answer pipeline ---- */
 function render(answer,q,src,conf,t0){
   connect.classList.remove('think');
-  if(answer){ banner.textContent=answer; fitBanner(answer); lastAnswer=answer; speak(answer); }
+  if(answer){ lastAnswer=answer; if(cfg.showAnswer){ banner.textContent=answer; fitBanner(answer); } else { bannerRest(); } speak(answer); }
   const ms=Math.round(performance.now()-t0);
   const tag = src==="local"?"cheat-sheet":src==="ai"?"AI":src==="none"?"no match":"";
   const cls = src==="local"?"src-local":src==="ai"?"src-ai":"src-none";
@@ -346,7 +363,7 @@ function render(answer,q,src,conf,t0){
 async function answerQuestion(q){
   if(!q||!q.trim()) return;
   const t0=performance.now();
-  connect.classList.add('think'); banner.textContent="…"; banner.style.fontSize="34px";
+  connect.classList.add('think'); if(cfg.showAnswer){ banner.textContent="…"; banner.style.fontSize="34px"; }
   const local=localSearch(q);
   if(local && local.conf!=="low"){ render(local.answer,q,"local",local.conf,t0); return; }
   qline.innerHTML="“"+q+"” <span class='src-ai'>· asking AI…</span>";
@@ -380,7 +397,7 @@ function beginHold(ev){ ev.preventDefault(); if(holding) return; holding=true;
   unlock(); try{speechSynthesis.cancel();}catch(e){}
   finalText=""; interimText=""; qline.textContent="";
   connect.classList.remove('think'); connect.classList.add('rec'); connect.textContent="LISTENING";
-  banner.textContent="…"; banner.style.fontSize="34px";
+  if(cfg.showAnswer){ banner.textContent="…"; banner.style.fontSize="34px"; }
   if(recog){ try{recog.start();}catch(_){ try{recog.stop();}catch(e){} setTimeout(()=>{try{recog.start();}catch(e){}},150);} }
 }
 function endHold(ev){ if(!holding) return; if(ev&&ev.preventDefault) ev.preventDefault(); holding=false;
@@ -399,8 +416,10 @@ document.addEventListener('pointerdown',primeTTS);   // unlock voice on first to
 banner.addEventListener('click',()=>{ if(lastAnswer){ primeTTS(); speak(lastAnswer); } });  // tap banner to hear it again
 pin.addEventListener('click',()=>sheet.classList.add('open'));
 sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
-$("save").addEventListener('click',()=>{ saveCfg(); loadCfg(); sheet.classList.remove('open'); });
-$("tgVoice").addEventListener('click',()=>{ cfg.voice=!cfg.voice; loadCfg(); saveCfg(); });
+$("save").addEventListener('click',()=>{ saveCfg(); renderCfg(); sheet.classList.remove('open'); });
+$("tgVoice").addEventListener('click',()=>{ cfg.voice=!cfg.voice; saveCfg(); renderCfg(); });
+$("modeShow").addEventListener('click',()=>{ cfg.showAnswer=true; saveCfg(); renderCfg(); });
+$("modeStealth").addEventListener('click',()=>{ cfg.showAnswer=false; saveCfg(); renderCfg(); });
 $("mgo").addEventListener('click',()=>{ const v=$("manualq").value; $("manualq").value=""; sheet.classList.remove('open'); answerQuestion(v); });
 $("manualq").addEventListener('keydown',e=>{ if(e.key==="Enter") $("mgo").click(); });
 
