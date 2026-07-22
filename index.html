@@ -336,21 +336,28 @@ function saveCfg(){
 }
 
 /* ---- speech synthesis ---- */
-let lastAnswer="", ttsPrimed=false;
-function unlock(){ try{ const w=new SpeechSynthesisUtterance(" "); w.volume=0; speechSynthesis.speak(w); speechSynthesis.resume(); speechSynthesis.getVoices(); }catch(e){} }
+let lastAnswer="", ttsPrimed=false, voicesReady=false;
+function loadVoices(){ try{ const v=speechSynthesis.getVoices(); if(v&&v.length) voicesReady=true; }catch(e){} }
+try{ speechSynthesis.onvoiceschanged=loadVoices; }catch(e){}
+loadVoices();
+/* keep the iOS speech engine from going idle-dead */
+setInterval(()=>{ try{ if(speechSynthesis.speaking) speechSynthesis.resume(); }catch(e){} }, 4000);
+function unlock(){ try{ const w=new SpeechSynthesisUtterance(""); w.volume=0; speechSynthesis.speak(w); speechSynthesis.resume(); loadVoices(); }catch(e){} }
 function primeTTS(){ if(ttsPrimed) return; ttsPrimed=true; unlock(); }
-function speak(text){ if(!cfg.voice||!text) return;
-  const go=()=>{ try{
-    speechSynthesis.cancel();
+function speak(text){
+  if(!cfg.voice||!text) return;
+  const run=(attempt)=>{ try{
+    if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel();
     const u=new SpeechSynthesisUtterance(text);
     u.rate=cfg.rate; u.pitch=1; u.volume=1; u.lang="en-US";
-    const vs=speechSynthesis.getVoices()||[];
-    const en=vs.find(v=>/^en[-_]/i.test(v.lang)); if(en) u.voice=en;
+    const vs=speechSynthesis.getVoices()||[]; const en=vs.find(v=>/^en[-_]/i.test(v.lang)); if(en) u.voice=en;
+    let started=false; u.onstart=()=>{ started=true; };
     speechSynthesis.speak(u);
-    setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} }, 60);
+    setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} }, 40);
+    /* iOS sometimes silently drops the first attempt after the mic — retry once */
+    if(attempt<2){ setTimeout(()=>{ if(!started && !speechSynthesis.speaking) run(attempt+1); }, 350); }
   }catch(e){} };
-  /* let iOS switch the audio session from mic→playback before speaking */
-  setTimeout(go, 220);
+  setTimeout(()=>run(1), 160);
 }
 function fitBanner(t){ const n=(t||"").length; banner.style.fontSize = n<=9?"34px": n<=15?"28px": n<=24?"22px": n<=36?"17px":"14px"; }
 
@@ -392,13 +399,14 @@ function initRecog(){
   };
 }
 function beginHold(ev){ ev.preventDefault(); if(holding) return; holding=true;
-  unlock(); try{speechSynthesis.cancel();}catch(e){}
+  /* do NOT touch the speech engine while the mic is starting — that clash silences iOS */
   finalText=""; interimText=""; qline.textContent="";
   connect.classList.remove('think'); connect.classList.add('rec'); connect.textContent="LISTENING";
   if(cfg.showAnswer){ banner.textContent="…"; banner.style.fontSize="34px"; }
   if(recog){ try{recog.start();}catch(_){ try{recog.stop();}catch(e){} setTimeout(()=>{try{recog.start();}catch(e){}},150);} }
 }
 function endHold(ev){ if(!holding) return; if(ev&&ev.preventDefault) ev.preventDefault(); holding=false;
+  primeTTS();                                       // unlock voice inside this release gesture
   connect.classList.remove('rec'); connect.textContent="Connect";
   if(recog){ try{recog.stop();}catch(_){} }        // onend → answer
   else { const q=qline.textContent.trim(); if(q) answerQuestion(q); }
@@ -410,13 +418,13 @@ window.addEventListener('pointerup',endHold);
 connect.addEventListener('pointercancel',endHold);
 connect.addEventListener('contextmenu',e=>e.preventDefault());
 
-document.addEventListener('pointerdown',primeTTS);   // unlock voice on first touch anywhere
-banner.addEventListener('click',()=>{ if(lastAnswer){ primeTTS(); speak(lastAnswer); } });  // tap banner to hear it again
+banner.addEventListener('click',()=>{ primeTTS(); if(lastAnswer) speak(lastAnswer); });  // tap banner to hear it again
 document.querySelector('.logo').addEventListener('click',()=>{   // tap logo to cycle the decoy category
+  primeTTS();
   decoyIdx=(decoyIdx+1)%DECOYS.length; cfg.decoy=DECOYS[decoyIdx];
   renderCfg(); try{localStorage.setItem('gcc',JSON.stringify(cfg));}catch(e){}
 });
-pin.addEventListener('click',()=>sheet.classList.add('open'));
+pin.addEventListener('click',()=>{ primeTTS(); sheet.classList.add('open'); });
 sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
 $("save").addEventListener('click',()=>{ saveCfg(); renderCfg(); sheet.classList.remove('open'); });
 $("tgVoice").addEventListener('click',()=>{ cfg.voice=!cfg.voice; saveCfg(); renderCfg(); });
