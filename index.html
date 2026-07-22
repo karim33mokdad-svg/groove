@@ -316,10 +316,21 @@ function saveCfg(){
 }
 
 /* ---- speech synthesis ---- */
-let lastAnswer="";
-function unlock(){try{const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w);}catch(e){}}
+let lastAnswer="", ttsPrimed=false;
+function unlock(){ try{ const w=new SpeechSynthesisUtterance(" "); w.volume=0; speechSynthesis.speak(w); speechSynthesis.resume(); speechSynthesis.getVoices(); }catch(e){} }
+function primeTTS(){ if(ttsPrimed) return; ttsPrimed=true; unlock(); }
 function speak(text){ if(!cfg.voice||!text) return;
-  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=cfg.rate; u.pitch=1; u.volume=1; speechSynthesis.speak(u);}catch(e){}
+  const go=()=>{ try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.rate=cfg.rate; u.pitch=1; u.volume=1; u.lang="en-US";
+    const vs=speechSynthesis.getVoices()||[];
+    const en=vs.find(v=>/^en[-_]/i.test(v.lang)); if(en) u.voice=en;
+    speechSynthesis.speak(u);
+    setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} }, 60);
+  }catch(e){} };
+  /* let iOS switch the audio session from mic→playback before speaking */
+  setTimeout(go, 220);
 }
 function fitBanner(t){ const n=(t||"").length; banner.style.fontSize = n<=9?"34px": n<=15?"28px": n<=24?"22px": n<=36?"17px":"14px"; }
 
@@ -384,6 +395,8 @@ window.addEventListener('pointerup',endHold);
 connect.addEventListener('pointercancel',endHold);
 connect.addEventListener('contextmenu',e=>e.preventDefault());
 
+document.addEventListener('pointerdown',primeTTS);   // unlock voice on first touch anywhere
+banner.addEventListener('click',()=>{ if(lastAnswer){ primeTTS(); speak(lastAnswer); } });  // tap banner to hear it again
 pin.addEventListener('click',()=>sheet.classList.add('open'));
 sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
 $("save").addEventListener('click',()=>{ saveCfg(); loadCfg(); sheet.classList.remove('open'); });
