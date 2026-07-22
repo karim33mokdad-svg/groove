@@ -346,7 +346,12 @@ function renderCfg(){
   $("srcAi").classList.toggle("on",!cfg.kbFirst);
   bannerRest();
 }
-function loadCfg(){ try{const s=JSON.parse(localStorage.getItem("gcc")||"{}");Object.assign(cfg,s);}catch(e){} renderCfg(); }
+function loadCfg(){
+  try{const s=JSON.parse(localStorage.getItem("gcc")||"{}");Object.assign(cfg,s);}catch(e){}
+  /* one-time cleanup: clear any stale category left over from the old logo-cycling */
+  if(!cfg._decoyReset){ cfg.decoy="FRENCH FRIES"; cfg._decoyReset=true; try{localStorage.setItem("gcc",JSON.stringify(cfg));}catch(e){} }
+  renderCfg();
+}
 function saveCfg(){
   cfg.provider=$("provider").value; cfg.apikey=$("apikey").value; cfg.rate=parseFloat($("rate").value);
   cfg.decoy=($("decoy").value.trim()||"FRENCH FRIES");
