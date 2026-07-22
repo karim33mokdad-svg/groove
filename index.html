@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SpeedQuizzing</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+  html,body{height:100%;background:#000;overflow:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;position:fixed;width:100%;}
+  .stage{position:relative;width:100%;max-width:440px;height:100vh;height:100dvh;
+    margin:0 auto;background:#000;overflow:hidden;}
+  /* orange angular bands */
+  .band{position:absolute;left:0;top:0;width:100%;height:100%;background:#ED8A00;z-index:1;}
+  .band.top{clip-path:polygon(0 20%,100% 15%,100% 33%,0 41%);}
+  .band.bottom{clip-path:polygon(0 76%,100% 86%,100% 100%,0 100%);}
+  .ver{position:absolute;top:2.6%;right:6%;color:#8f8f8f;font-size:13px;z-index:5;letter-spacing:.5px;}
+  /* logo */
+  .logo{position:absolute;top:11.5%;left:6%;z-index:5;display:flex;align-items:center;gap:9px;}
+  .lines{display:flex;flex-direction:column;gap:4px;transform:skewX(-20deg);}
+  .lines i{height:5px;background:#fff;border-radius:3px;display:block;}
+  .lines i:nth-child(1){width:34px;}
+  .lines i:nth-child(2){width:26px;}
+  .lines i:nth-child(3){width:18px;}
+  .logo b{color:#fff;font-weight:800;font-style:italic;font-size:33px;letter-spacing:-1px;}
+  /* banner = answer */
+  .banner{position:absolute;top:27.5%;left:5%;right:5%;height:12%;border-radius:16px;
+    background:linear-gradient(180deg,#7c4b12,#5a3410);
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    color:#f4e5d2;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+    z-index:5;padding:6px 12px;font-size:31px;line-height:1.04;overflow:hidden;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  /* connect */
+  .connect{position:absolute;top:46%;left:50%;transform:translateX(-50%);
+    width:210px;height:210px;border-radius:50%;z-index:6;cursor:pointer;
+    background:radial-gradient(circle at 50% 38%,#4c4c4c,#242424);
+    border:1px solid #565656;color:#fff;font-size:30px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;
+    box-shadow:0 12px 34px rgba(0,0,0,.55);transition:transform .07s,box-shadow .15s,background .15s;}
+  .connect:active{transform:translateX(-50%) scale(.97);}
+  .connect.rec{background:radial-gradient(circle at 50% 38%,#c02333,#5e0d16);border-color:#ff6d6d;font-size:24px;
+    box-shadow:0 0 0 7px rgba(237,138,0,.22),0 0 46px rgba(255,70,70,.55);animation:glow 1s infinite;}
+  .connect.think{background:radial-gradient(circle at 50% 38%,#2f6fa6,#12324d);border-color:#6cc0ff;font-size:26px;}
+  @keyframes glow{0%,100%{filter:brightness(1);}50%{filter:brightness(1.22);}}
+  /* pin -> setup */
+  .pin{position:absolute;bottom:8.5%;left:8.5%;width:118px;height:118px;border-radius:50%;z-index:6;
+    background:#f4b45f;border:6px solid #f8cd93;color:#1c1c1c;font-weight:800;font-size:22px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    -webkit-user-select:none;user-select:none;letter-spacing:1px;}
+  .qline{position:absolute;top:70.5%;left:7%;right:7%;text-align:center;color:#cfcfcf;
+    font-size:13px;min-height:34px;z-index:5;opacity:.85;line-height:1.3;}
+  .qline .src-local{color:#37e6a4;}.qline .src-ai{color:#5cc8ff;}.qline .src-none{color:#ff6b6b;}
+  .foot{position:absolute;bottom:2.3%;left:0;right:0;text-align:center;color:#9a9a9a;font-size:14px;z-index:5;}
+  /* settings sheet */
+  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);
+    display:none;align-items:flex-end;z-index:50;}
+  .sheet.open{display:flex;}
+  .sheetin{background:#161616;width:100%;max-width:440px;margin:0 auto;color:#eee;
+    border-radius:20px 20px 0 0;border-top:1px solid #333;padding:18px 16px 34px;max-height:90vh;overflow:auto;}
+  .sheetin h3{font-size:16px;margin-bottom:12px;color:#f4b45f;}
+  label.fld{display:block;font-size:12px;color:#9a9a9a;margin:12px 0 5px;font-weight:600;}
+  select,.fld input,.mrow input{width:100%;background:#242424;border:1px solid #3a3a3a;color:#fff;
+    border-radius:11px;padding:12px;font-size:15px;}
+  .mrow{display:flex;gap:8px;}
+  .mrow button{border:none;border-radius:11px;padding:0 16px;font-weight:800;background:#333;color:#f4b45f;}
+  .tg{display:inline-block;margin-top:12px;padding:11px 16px;border-radius:11px;font-size:13px;font-weight:700;
+    background:#242424;border:1px solid #3a3a3a;color:#9a9a9a;cursor:pointer;}
+  .tg.on{color:#37e6a4;border-color:rgba(55,230,164,.5);}
+  .save{width:100%;margin-top:18px;border:none;border-radius:12px;padding:15px;font-weight:800;font-size:16px;
+    color:#1c1c1c;background:#f4b45f;}
+  .note{font-size:12px;color:#9a9a9a;line-height:1.5;margin-top:12px;}
+  .note b{color:#f4b45f;}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="band top"></div>
+    <div class="band bottom"></div>
+    <div class="ver">5.6.24</div>
+    <div class="logo"><span class="lines"><i></i><i></i><i></i></span><b>SpeedQuizzing</b></div>
+    <div class="banner" id="banner">READY</div>
+    <div class="connect" id="connect">Connect</div>
+    <div class="qline" id="qline"></div>
+    <div class="pin" id="pin">PIN</div>
+    <div class="foot">speedquizzing.com</div>
+  </div>
+
+  <!-- SETUP (opens from PIN) -->
+  <div class="sheet" id="sheet">
+    <div class="sheetin">
+      <h3>Setup</h3>
+      <label class="fld">AI backup (for questions the cheat-sheet misses)</label>
+      <select id="provider">
+        <option value="groq">Groq — Llama (FASTEST, recommended)</option>
+        <option value="openai">OpenAI — gpt-4o-mini</option>
+        <option value="anthropic">Anthropic — Claude Haiku</option>
+        <option value="none">Cheat-sheet only (no AI)</option>
+      </select>
+      <label class="fld">API key</label>
+      <input id="apikey" type="password" placeholder="Paste your key (stored on this phone only)">
+      <label class="fld">Voice speed</label>
+      <select id="rate">
+        <option value="1.35">Fast (recommended)</option>
+        <option value="1.6">Very fast</option>
+        <option value="1.1">Normal</option>
+      </select>
+      <span class="tg on" id="tgVoice">🔊 Earphone voice ON</span>
+      <label class="fld" style="margin-top:16px">Manual question (backup if the mic misfires)</label>
+      <div class="mrow"><input id="manualq" placeholder="Type a question…" autocomplete="off"><button id="mgo">GO</button></div>
+      <button class="save" id="save">Save &amp; close</button>
+      <div class="note">
+        <b>How to play:</b> press &amp; hold <b>Connect</b> the moment the speaker starts, let go when they finish —
+        the answer reads into your earphones. Tap <b>PIN</b> for this menu.<br><br>
+        <b>Speed:</b> Groq answers in ~0.3–0.8s. Free key at console.groq.com. Your key never leaves this phone.
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ============================================================
+   1970s KNOWLEDGE BASE  — instant, offline, zero latency
+   ============================================================ */
+const KB = [
+ // ---- MUSIC ----
+ {a:"ABBA (with \"Waterloo\")", k:["eurovision 1974","won eurovision","eurovision won","waterloo eurovision"]},
+ {a:"1974", k:["what year abba","abba win eurovision","abba won eurovision","year eurovision waterloo"]},
+ {a:"Queen", k:["bohemian rhapsody","who sang bohemian","galileo","band bohemian"]},
+ {a:"The Eagles", k:["hotel california","who sang hotel"]},
+ {a:"Fleetwood Mac", k:["rumours album","rumours 1977","album rumours","band rumours"]},
+ {a:"Pink Floyd", k:["dark side of the moon","dark side moon","prism album cover","band dark side"]},
+ {a:"Led Zeppelin", k:["stairway to heaven","who sang stairway","stairway heaven"]},
+ {a:"Bee Gees", k:["saturday night fever soundtrack","stayin alive","who sang stayin","night fever song","dominated saturday night"]},
+ {a:"Gloria Gaynor", k:["i will survive","who sang i will survive"]},
+ {a:"Chic", k:["le freak","song le freak"]},
+ {a:"Donna Summer", k:["i feel love","hot stuff","bad girls","queen of disco"]},
+ {a:"David Bowie", k:["ziggy stardust","who was ziggy","space oddity","aladdin sane"]},
+ {a:"Sex Pistols", k:["god save the queen punk","anarchy in the uk","johnny rotten","sid vicious band"]},
+ {a:"The Clash", k:["london calling","white riot","band london calling"]},
+ {a:"Ramones", k:["blitzkrieg bop","hey ho let's go"]},
+ {a:"Bob Marley", k:["exodus album","reggae legend","no woman no cry","who sang exodus"]},
+ {a:"Stevie Wonder", k:["songs in the key of life","superstition","who sang superstition"]},
+ {a:"Marvin Gaye", k:["what's going on","sexual healing artist","let's get it on"]},
+ {a:"Elton John", k:["rocket man","goodbye yellow brick","tiny dancer","bennie and the jets"]},
+ {a:"1975 (\"Bohemian Rhapsody\")", k:["what year bohemian","bohemian rhapsody release","bohemian rhapsody year"]},
+ {a:"1970", k:["beatles split","beatles break up","when did beatles split","beatles broke up"]},
+ {a:"Elvis Presley", k:["died at graceland","graceland 1977","king of rock died","who died graceland","elvis die"]},
+ {a:"1977", k:["elvis died year","what year elvis","studio 54 open","when studio 54"]},
+ {a:"CBGB", k:["punk venue new york","biggest punk venue","new york punk club","famous punk venue"]},
+ {a:"Studio 54", k:["famous disco club","new york disco club","legendary nightclub 54"]},
+ {a:"Earth, Wind & Fire", k:["september song","boogie wonderland","shining star band"]},
+ {a:"Carole King", k:["tapestry album","so far away","singer tapestry"]},
+ {a:"Black Sabbath", k:["paranoid band","ozzy osbourne band","iron man song","war pigs"]},
+ {a:"T. Rex", k:["marc bolan","glam get it on","bang a gong"]},
+ {a:"The Jackson 5", k:["abc song","i want you back","young michael jackson band"]},
+ // ---- POLITICS / WORLD ----
+ {a:"Richard Nixon", k:["resigned as president","us president resigned","who resigned 1974","president resign","watergate president"]},
+ {a:"1974", k:["nixon resign year","what year nixon","when did nixon resign"]},
+ {a:"1972", k:["watergate break in","watergate break-in year","when watergate","year of watergate"]},
+ {a:"Gerald Ford", k:["pardoned nixon","who pardoned nixon","president after nixon","ford president"]},
+ {a:"Jimmy Carter", k:["became president 1977","president 1977","who was president 1977","carter president"]},
+ {a:"Margaret Thatcher", k:["uk prime minister 1979","became prime minister 1979","first female pm","who became pm 1979","iron lady"]},
+ {a:"1979", k:["thatcher become","when thatcher pm","iranian revolution year","when iranian revolution"]},
+ {a:"Iranian Revolution", k:["revolution in iran","iran 1979","ayatollah khomeini revolution","shah overthrown","revolution occurred iran"]},
+ {a:"The Fall of Saigon (to North Vietnamese forces)", k:["saigon 1975","what happened saigon","fall of saigon","saigon fall"]},
+ {a:"1975", k:["fall of saigon year","when did saigon fall","microsoft founded year","when microsoft founded"]},
+ {a:"Ho Chi Minh City", k:["saigon renamed","saigon became","new name saigon"]},
+ {a:"Yom Kippur War", k:["1973 middle east war","october war 1973","egypt israel 1973 war","arab israeli 1973"]},
+ {a:"The 1973 oil crisis / Arab oil embargo", k:["oil crisis","oil embargo","1973 oil","energy crisis 1973","opec embargo"]},
+ {a:"Camp David Accords", k:["camp david","1978 peace","carter sadat begin","egypt israel peace 1978"]},
+ {a:"Anwar Sadat & Menachem Begin (with Carter)", k:["camp david leaders","who signed camp david","camp david figures"]},
+ {a:"1971", k:["bangladesh independence","when bangladesh","bangladesh independent","intel 4004 year"]},
+ {a:"Bangladesh", k:["independence 1971","gained independence 1971","east pakistan became"]},
+ {a:"The Munich massacre / Olympic attack", k:["munich 1972 attack","israeli athletes killed","black september","munich olympics attack"]},
+ {a:"Mao Zedong", k:["chinese leader died 1976","mao died","who died china 1976","chairman mao death"]},
+ {a:"Francisco Franco", k:["spanish dictator died 1975","franco died","spain dictator death"]},
+ {a:"The Jonestown massacre", k:["jonestown","jim jones","guyana cult 1978","mass suicide guyana"]},
+ {a:"Soviet invasion of Afghanistan", k:["soviet afghanistan","ussr invaded afghanistan","afghanistan 1979"]},
+ {a:"Paris Peace Accords", k:["paris peace","1973 vietnam agreement","ended us vietnam","vietnam peace accord"]},
+ {a:"Carnation Revolution", k:["portugal 1974","portuguese revolution","carnation revolution"]},
+ {a:"The Soweto uprising", k:["soweto","south africa 1976 uprising","student uprising south africa"]},
+ // ---- FILM / TV / CULTURE ----
+ {a:"Steven Spielberg", k:["who directed jaws","director of jaws","jaws director"]},
+ {a:"George Lucas", k:["who directed star wars","star wars director","director star wars"]},
+ {a:"Francis Ford Coppola", k:["directed the godfather","godfather director","who directed godfather"]},
+ {a:"Star Wars", k:["darth vader 1977","film with darth vader","1977 space film","movie darth vader"]},
+ {a:"Jaws", k:["1975 shark","shark movie","killer shark film","spielberg shark"]},
+ {a:"Sylvester Stallone", k:["played rocky","rocky balboa actor","who played rocky","rocky star"]},
+ {a:"Rocky", k:["1976 boxing film","boxing movie stallone","philadelphia boxer film"]},
+ {a:"Robert De Niro", k:["taxi driver star","you talkin to me","travis bickle","taxi driver actor"]},
+ {a:"John Travolta & Olivia Newton-John", k:["grease stars","who starred grease","grease leads"]},
+ {a:"John Travolta", k:["saturday night fever star","white suit disco","tony manero","night fever actor"]},
+ {a:"1978", k:["grease release","grease year","what year grease","camp david year","first ivf baby year"]},
+ {a:"Sigourney Weaver", k:["alien star","ellen ripley","who starred alien","alien lead actress"]},
+ {a:"Alien", k:["1979 space horror","in space no one","ridley scott 1979","xenomorph film"]},
+ {a:"Christopher Reeve", k:["played superman","superman 1978 actor","who played superman"]},
+ {a:"The Exorcist", k:["1973 horror","possessed girl film","head spinning horror","pea soup film"]},
+ {a:"The Godfather", k:["1972 mafia film","corleone","offer he can't refuse","brando mafia"]},
+ {a:"A Clockwork Orange", k:["1971 kubrick","droogs","clockwork orange"]},
+ {a:"Apocalypse Now", k:["1979 vietnam film","smell of napalm","coppola vietnam"]},
+ {a:"One Flew Over the Cuckoo's Nest", k:["1975 mental hospital","nicholson asylum","cuckoo's nest"]},
+ {a:"Lynda Carter", k:["who played wonder woman","wonder woman actress","wonder woman star"]},
+ {a:"Farrah Fawcett", k:["charlie's angels star","famous 70s poster","feathered hair angel"]},
+ {a:"Henry Winkler (as \"The Fonz\")", k:["happy days fonz","the fonz","who played fonzie","fonzie actor"]},
+ {a:"1975", k:["saturday night live start","snl start","when did snl","when saturday night live"]},
+ {a:"M*A*S*H", k:["korean war medical show","army surgeons tv","4077th"]},
+ {a:"Dallas (J.R. Ewing)", k:["who shot jr","jr ewing","oil family tv show","dallas jr"]},
+ {a:"Fawlty Towers", k:["john cleese hotel","basil fawlty","cleese sitcom"]},
+ {a:"The Muppet Show", k:["jim henson show","kermit miss piggy show","muppet show"]},
+ // ---- SPORT ----
+ {a:"Brazil (Pelé)", k:["1970 world cup","who won 1970 world cup","world cup 1970"]},
+ {a:"West Germany (Beckenbauer)", k:["1974 world cup","who won 1974 world cup","world cup 1974"]},
+ {a:"Argentina (Kempes)", k:["1978 world cup","who won 1978 world cup","world cup 1978","which country 1978 world cup"]},
+ {a:"Muhammad Ali", k:["beat foreman","defeated foreman","rumble in the jungle","who beat george foreman","greatest boxer"]},
+ {a:"1974", k:["rumble in the jungle year","when rumble jungle","ali foreman year"]},
+ {a:"The Rumble in the Jungle", k:["ali foreman fight name","zaire fight","kinshasa fight name"]},
+ {a:"The Thrilla in Manila", k:["ali frazier 1975","manila fight","third ali frazier"]},
+ {a:"Joe Frazier", k:["fight of the century beat ali","who beat ali 1971","1971 ali loss"]},
+ {a:"Munich", k:["1972 olympics host","which city 1972 olympics","1972 summer olympics","hosted 1972 olympics"]},
+ {a:"Montreal", k:["1976 olympics host","which city 1976 olympics","1976 summer olympics"]},
+ {a:"Mark Spitz", k:["seven gold medals 1972","seven golds swimming","swimmer seven gold"]},
+ {a:"Nadia Comăneci", k:["first perfect 10","perfect 10 olympics","first olympic perfect ten","gymnast perfect 10","scored perfect 10"]},
+ // ---- SCIENCE / TECH ----
+ {a:"Apollo 13", k:["1970 moon mission","houston we have a problem","failed moon mission","aborted apollo"]},
+ {a:"Intel 4004", k:["first microprocessor","1971 microprocessor","intel 4004"]},
+ {a:"Pong", k:["first arcade hit","1972 video game","atari tennis game","early video game pong"]},
+ {a:"Microsoft", k:["founded in 1975","company founded 1975","which company 1975","gates allen company"]},
+ {a:"Apple", k:["founded in 1976","company founded 1976","which company 1976","jobs wozniak company","apple founded"]},
+ {a:"1976", k:["apple founded year","when apple founded","concorde commercial","viking mars landing year"]},
+ {a:"The Sony Walkman", k:["sony 1979 device","which device sony 1979","portable cassette player","walkman"]},
+ {a:"1979", k:["walkman release","when walkman","walkman year"]},
+ {a:"Louise Brown", k:["first ivf baby","first test tube baby","1978 ivf baby name"]},
+ {a:"Concorde", k:["supersonic passenger jet","1976 supersonic","fastest passenger plane 70s"]},
+ {a:"Viking 1", k:["first mars landing","1976 mars","landed on mars 1976"]},
+ {a:"Voyager (1 & 2)", k:["1977 space probes","launched 1977 probes","golden record probe"]},
+ {a:"Skylab", k:["first us space station","1973 space station","america space station"]},
+ {a:"The Apple II", k:["1977 personal computer","apple 1977 computer","apple ii"]},
+ // ---- TIMELINE ANCHORS ----
+ {a:"Beatles split & Apollo 13", k:["what happened 1970","happened in 1970","1970 events"]},
+ {a:"Bangladesh independence", k:["what happened 1971","happened in 1971","1971 events"]},
+ {a:"Watergate break-in & The Godfather", k:["what happened 1972","happened in 1972","1972 events"]},
+ {a:"The oil crisis & Yom Kippur War", k:["what happened 1973","happened in 1973","1973 events"]},
+ {a:"Nixon resigns; ABBA & Ali win", k:["what happened 1974","happened in 1974","1974 events"]},
+ {a:"Fall of Saigon; Jaws; Microsoft founded", k:["what happened 1975","happened in 1975","1975 events"]},
+ {a:"Apple founded; Rocky; Concorde", k:["what happened 1976","happened in 1976","1976 events"]},
+ {a:"Star Wars; Elvis dies", k:["what happened 1977","happened in 1977","1977 events"]},
+ {a:"Camp David; Grease", k:["what happened 1978","happened in 1978","1978 events"]},
+ {a:"Iran; Thatcher; Walkman", k:["what happened 1979","happened in 1979","1979 events"]},
+ // ---- TRAPS ----
+ {a:"1969 (a trap — that's the 1960s)", k:["first moon landing","woodstock year","apollo 11 moon"]},
+ {a:"1980 (trap — not the 70s)", k:["john lennon died","who shot jr aired","pac-man release","pacman year"]},
+ {a:"1981 (trap — not the 70s)", k:["mtv launched","space shuttle first flight","when mtv"]},
+ {a:"1982 (trap — not the 70s)", k:["thriller album","michael jackson thriller"]}
+];
+
+const STOP = new Set("the a an of in on at to is was were are what which who whom whose when where why how did do does done was year did which what's whats name give first".split(" "));
+function norm(s){return (s||"").toLowerCase().replace(/[^a-z0-9\s']/g," ").replace(/\s+/g," ").trim();}
+function localSearch(qRaw){
+  const q = norm(qRaw); if(!q) return null;
+  let best=null, bestScore=0;
+  for(const e of KB){
+    let score=0;
+    for(const phrase of e.k){
+      const p = norm(phrase); const pw = p.split(" ");
+      if(q.includes(p)){ score += pw.length*3 + 2; }
+      else { let hit=0; for(const w of pw){ if(w.length>2 && !STOP.has(w) && q.includes(w)) hit++; }
+        if(hit===pw.length && pw.length>1) score += pw.length*2; else score += hit; }
+    }
+    if(score>bestScore){bestScore=score;best=e;}
+  }
+  let conf = bestScore>=8 ? "high" : bestScore>=4 ? "medium" : "low";
+  if(!best || bestScore<3) return null;
+  return {answer:best.a, conf, score:bestScore};
+}
+
+/* ---- AI fallback (ultra-short for speed) ---- */
+async function aiSearch(q){
+  const provider = cfg.provider, key = (cfg.apikey||"").trim();
+  if(provider==="none" || !key) return null;
+  const sys = "You are a 1970s quiz expert. Answer with ONLY the direct answer in 6 words or fewer. No explanation, no full sentence. If a year is asked, give just the year.";
+  try{
+    if(provider==="groq" || provider==="openai"){
+      const url = provider==="groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+      const model = provider==="groq" ? "llama-3.1-8b-instant" : "gpt-4o-mini";
+      const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+        body:JSON.stringify({model,temperature:0,max_tokens:24,messages:[{role:"system",content:sys},{role:"user",content:q}]})});
+      const j = await r.json(); if(j.error) throw new Error(j.error.message||"api error");
+      return (j.choices?.[0]?.message?.content||"").trim();
+    }
+    if(provider==="anthropic"){
+      const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
+        "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-3-5-haiku-latest",max_tokens:24,system:sys,messages:[{role:"user",content:q}]})});
+      const j = await r.json(); if(j.error) throw new Error(j.error.message||"api error");
+      return (j.content?.[0]?.text||"").trim();
+    }
+  }catch(err){ qline.innerHTML="<span class='src-none'>AI error: "+err.message+"</span>"; return null; }
+  return null;
+}
+
+/* ---- config (this device only) ---- */
+const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35};
+const $ = id=>document.getElementById(id);
+const banner=$("banner"), connect=$("connect"), qline=$("qline"), pin=$("pin"), sheet=$("sheet");
+function loadCfg(){
+  try{const s=JSON.parse(localStorage.getItem("gcc")||"{}");Object.assign(cfg,s);}catch(e){}
+  $("provider").value=cfg.provider; $("apikey").value=cfg.apikey; $("rate").value=String(cfg.rate);
+  $("tgVoice").classList.toggle("on",cfg.voice); $("tgVoice").textContent=cfg.voice?"🔊 Earphone voice ON":"🔇 Earphone voice OFF";
+}
+function saveCfg(){
+  cfg.provider=$("provider").value; cfg.apikey=$("apikey").value; cfg.rate=parseFloat($("rate").value);
+  try{localStorage.setItem("gcc",JSON.stringify(cfg));}catch(e){}
+}
+
+/* ---- speech synthesis ---- */
+let lastAnswer="";
+function unlock(){try{const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w);}catch(e){}}
+function speak(text){ if(!cfg.voice||!text) return;
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=cfg.rate; u.pitch=1; u.volume=1; speechSynthesis.speak(u);}catch(e){}
+}
+function fitBanner(t){ const n=(t||"").length; banner.style.fontSize = n<=9?"34px": n<=15?"28px": n<=24?"22px": n<=36?"17px":"14px"; }
+
+/* ---- answer pipeline ---- */
+function render(answer,q,src,conf,t0){
+  connect.classList.remove('think');
+  if(answer){ banner.textContent=answer; fitBanner(answer); lastAnswer=answer; speak(answer); }
+  const ms=Math.round(performance.now()-t0);
+  const tag = src==="local"?"cheat-sheet":src==="ai"?"AI":src==="none"?"no match":"";
+  const cls = src==="local"?"src-local":src==="ai"?"src-ai":"src-none";
+  qline.innerHTML = (q?("“"+q+"”"):"") + (tag?("<br><span class='"+cls+"'>"+tag+(conf?" · "+conf:"")+" · "+ms+"ms</span>"):"");
+}
+async function answerQuestion(q){
+  if(!q||!q.trim()) return;
+  const t0=performance.now();
+  connect.classList.add('think'); banner.textContent="…"; banner.style.fontSize="34px";
+  const local=localSearch(q);
+  if(local && local.conf!=="low"){ render(local.answer,q,"local",local.conf,t0); return; }
+  qline.innerHTML="“"+q+"” <span class='src-ai'>· asking AI…</span>";
+  const ai=await aiSearch(q);
+  if(ai){ render(ai,q,"ai","AI",t0); return; }
+  if(local){ render(local.answer,q,"local","low guess",t0); }
+  else { render("NO MATCH",q,"none",null,t0); }
+}
+
+/* ---- hold-to-record speech recognition ---- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog=null, holding=false, finalText="", interimText="";
+function initRecog(){
+  if(!SR){ qline.textContent="This browser can't hear — use PIN → manual box."; return; }
+  recog=new SR(); recog.lang="en-US"; recog.interimResults=true; recog.continuous=true; recog.maxAlternatives=1;
+  recog.onresult=e=>{ interimText="";
+    for(let i=e.resultIndex;i<e.results.length;i++){ const t=e.results[i][0].transcript;
+      if(e.results[i].isFinal) finalText+=t; else interimText+=t; }
+    qline.textContent=(finalText+" "+interimText).trim()||"…";
+  };
+  recog.onerror=e=>{ if(e.error==="not-allowed"||e.error==="service-not-allowed")
+      qline.innerHTML="<span class='src-none'>Allow microphone, then hold again.</span>"; };
+  recog.onend=()=>{
+    if(holding){ try{recog.start();}catch(_){}; return; }  // still holding → keep listening
+    const q=(finalText||interimText).trim();
+    if(q) answerQuestion(q);
+    else { connect.classList.remove('rec','think'); connect.textContent="Connect"; }
+  };
+}
+function beginHold(ev){ ev.preventDefault(); if(holding) return; holding=true;
+  unlock(); try{speechSynthesis.cancel();}catch(e){}
+  finalText=""; interimText=""; qline.textContent="";
+  connect.classList.remove('think'); connect.classList.add('rec'); connect.textContent="LISTENING";
+  banner.textContent="…"; banner.style.fontSize="34px";
+  if(recog){ try{recog.start();}catch(_){ try{recog.stop();}catch(e){} setTimeout(()=>{try{recog.start();}catch(e){}},150);} }
+}
+function endHold(ev){ if(!holding) return; if(ev&&ev.preventDefault) ev.preventDefault(); holding=false;
+  connect.classList.remove('rec'); connect.textContent="Connect";
+  if(recog){ try{recog.stop();}catch(_){} }        // onend → answer
+  else { const q=qline.textContent.trim(); if(q) answerQuestion(q); }
+}
+
+/* ---- wiring ---- */
+connect.addEventListener('pointerdown',beginHold);
+window.addEventListener('pointerup',endHold);
+connect.addEventListener('pointercancel',endHold);
+connect.addEventListener('contextmenu',e=>e.preventDefault());
+
+pin.addEventListener('click',()=>sheet.classList.add('open'));
+sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
+$("save").addEventListener('click',()=>{ saveCfg(); loadCfg(); sheet.classList.remove('open'); });
+$("tgVoice").addEventListener('click',()=>{ cfg.voice=!cfg.voice; loadCfg(); saveCfg(); });
+$("mgo").addEventListener('click',()=>{ const v=$("manualq").value; $("manualq").value=""; sheet.classList.remove('open'); answerQuestion(v); });
+$("manualq").addEventListener('keydown',e=>{ if(e.key==="Enter") $("mgo").click(); });
+
+loadCfg(); initRecog();
+</script>
+</body>
+</html>
