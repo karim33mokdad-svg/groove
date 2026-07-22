@@ -25,6 +25,7 @@
   .lines i:nth-child(1){width:34px;}
   .lines i:nth-child(2){width:26px;}
   .lines i:nth-child(3){width:18px;}
+  .logo{cursor:pointer;-webkit-user-select:none;user-select:none;}
   .logo b{color:#fff;font-weight:800;font-style:italic;font-size:33px;letter-spacing:-1px;}
   /* banner = answer */
   .banner{position:absolute;top:27.5%;left:5%;right:5%;height:12%;border-radius:16px;
@@ -314,6 +315,8 @@ async function aiSearch(q){
 
 /* ---- config (this device only) ---- */
 const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35, showAnswer:true, decoy:"FRENCH FRIES"};
+const DECOYS = ["FRENCH FRIES","POP MUSIC","THE MOVIES","SPORT","GENERAL KNOWLEDGE","THE 1970s","GEOGRAPHY","SCIENCE","HISTORY","FOOD & DRINK","TV & FILM","MUSIC","NATURE","ART"];
+let decoyIdx = 0;
 const $ = id=>document.getElementById(id);
 const banner=$("banner"), connect=$("connect"), qline=$("qline"), pin=$("pin"), sheet=$("sheet");
 function bannerRest(){ const d=cfg.decoy||"FRENCH FRIES"; banner.textContent=d; fitBanner(d); }
@@ -355,10 +358,7 @@ function fitBanner(t){ const n=(t||"").length; banner.style.fontSize = n<=9?"34p
 function render(answer,q,src,conf,t0){
   connect.classList.remove('think');
   if(answer){ lastAnswer=answer; if(cfg.showAnswer){ banner.textContent=answer; fitBanner(answer); } else { bannerRest(); } speak(answer); }
-  const ms=Math.round(performance.now()-t0);
-  const tag = src==="local"?"cheat-sheet":src==="ai"?"AI":src==="none"?"no match":"";
-  const cls = src==="local"?"src-local":src==="ai"?"src-ai":"src-none";
-  qline.innerHTML = (q?("“"+q+"”"):"") + (tag?("<br><span class='"+cls+"'>"+tag+(conf?" · "+conf:"")+" · "+ms+"ms</span>"):"");
+  qline.innerHTML = "";   // transcript + timing hidden by request
 }
 async function answerQuestion(q){
   if(!q||!q.trim()) return;
@@ -366,7 +366,6 @@ async function answerQuestion(q){
   connect.classList.add('think'); if(cfg.showAnswer){ banner.textContent="…"; banner.style.fontSize="34px"; }
   const local=localSearch(q);
   if(local && local.conf!=="low"){ render(local.answer,q,"local",local.conf,t0); return; }
-  qline.innerHTML="“"+q+"” <span class='src-ai'>· asking AI…</span>";
   const ai=await aiSearch(q);
   if(ai){ render(ai,q,"ai","AI",t0); return; }
   if(local){ render(local.answer,q,"local","low guess",t0); }
@@ -382,7 +381,6 @@ function initRecog(){
   recog.onresult=e=>{ interimText="";
     for(let i=e.resultIndex;i<e.results.length;i++){ const t=e.results[i][0].transcript;
       if(e.results[i].isFinal) finalText+=t; else interimText+=t; }
-    qline.textContent=(finalText+" "+interimText).trim()||"…";
   };
   recog.onerror=e=>{ if(e.error==="not-allowed"||e.error==="service-not-allowed")
       qline.innerHTML="<span class='src-none'>Allow microphone, then hold again.</span>"; };
@@ -414,6 +412,10 @@ connect.addEventListener('contextmenu',e=>e.preventDefault());
 
 document.addEventListener('pointerdown',primeTTS);   // unlock voice on first touch anywhere
 banner.addEventListener('click',()=>{ if(lastAnswer){ primeTTS(); speak(lastAnswer); } });  // tap banner to hear it again
+document.querySelector('.logo').addEventListener('click',()=>{   // tap logo to cycle the decoy category
+  decoyIdx=(decoyIdx+1)%DECOYS.length; cfg.decoy=DECOYS[decoyIdx];
+  renderCfg(); try{localStorage.setItem('gcc',JSON.stringify(cfg));}catch(e){}
+});
 pin.addEventListener('click',()=>sheet.classList.add('open'));
 sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
 $("save").addEventListener('click',()=>{ saveCfg(); renderCfg(); sheet.classList.remove('open'); });
@@ -423,7 +425,7 @@ $("modeStealth").addEventListener('click',()=>{ cfg.showAnswer=false; saveCfg();
 $("mgo").addEventListener('click',()=>{ const v=$("manualq").value; $("manualq").value=""; sheet.classList.remove('open'); answerQuestion(v); });
 $("manualq").addEventListener('keydown',e=>{ if(e.key==="Enter") $("mgo").click(); });
 
-loadCfg(); initRecog();
+loadCfg(); initRecog(); decoyIdx=Math.max(0,DECOYS.indexOf(cfg.decoy));
 </script>
 </body>
 </html>
