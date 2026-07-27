@@ -12,7 +12,7 @@ const FILES = [
   'js/engine/core.js', 'js/engine/resolve.js', 'js/engine/ai.js', 'js/engine/turn.js'
 ];
 
-const sandbox = { window: {}, console, Math, Date, JSON };
+const sandbox = { self: {}, console, Math, Date, JSON };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 FILES.forEach(f => {
@@ -20,7 +20,7 @@ FILES.forEach(f => {
   try { vm.runInContext(src, sandbox, { filename: f }); }
   catch (e) { console.error('LOAD FAIL', f, e.message); process.exit(1); }
 });
-const MP = sandbox.window.MP;
+const MP = sandbox.self.MP;
 
 const N = parseInt(process.argv[2] || '25', 10);
 let issues = [];

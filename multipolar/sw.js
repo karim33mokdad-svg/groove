@@ -1,9 +1,9 @@
 /* MULTIPOLAR — offline cache. The whole game is static, so it works on a plane. */
-const CACHE = 'multipolar-v1';
+const CACHE = 'multipolar-v2';
 const ASSETS = [
   './', './index.html', './css/app.css', './icon.svg', './manifest.webmanifest',
   './js/data/powers.js', './js/data/theaters.js', './js/data/actions.js', './js/data/events.js',
-  './js/engine/core.js', './js/engine/resolve.js', './js/engine/ai.js', './js/engine/turn.js',
+  './js/engine/core.js', './js/engine/resolve.js', './js/engine/ai.js', './js/engine/turn.js', './js/engine/sim.js',
   './js/ui/map.js', './js/ui/ui.js', './js/main.js'
 ];
 self.addEventListener('install', e => {

@@ -60,8 +60,8 @@
       weight: S => 1.4,
       apply: S => {
         const ids = MP.powerList.filter(id => MP.POWERS[id].domConstr > 0.5);
-        const id = ids[Math.floor(Math.random() * ids.length)];
-        const swing = Math.random() < 0.5 ? -1 : 1;
+        const id = ids[Math.floor(MP.rnd() * ids.length)];
+        const swing = MP.rnd() < 0.5 ? -1 : 1;
         return {
           headline: (swing > 0 ? 'Governing coalition strengthened in ' : 'Electoral setback for the government of ') + MP.POWERS[id].name,
           detail: swing > 0
@@ -191,7 +191,7 @@
       id: 'tech_breakthrough', tag: 'TECH',
       weight: S => 1.0,
       apply: S => {
-        const id = ['CN', 'US', 'EU', 'IN'][Math.floor(Math.random() * 4)];
+        const id = ['CN', 'US', 'EU', 'IN'][Math.floor(MP.rnd() * 4)];
         return {
           headline: 'Domestic substitution milestone announced in ' + MP.POWERS[id].name,
           detail: 'A capability previously available only through import is demonstrated domestically. ' +
@@ -233,11 +233,11 @@
     const pool = EVENTS.map(e => ({ e, w: Math.max(0, e.weight(S)) })).filter(x => x.w > 0);
     const total = pool.reduce((s, x) => s + x.w, 0);
     if (!total) return null;
-    let r = Math.random() * total;
+    let r = MP.rnd() * total;
     for (const x of pool) { r -= x.w; if (r <= 0) return Object.assign({ id: x.e.id, tag: x.e.tag }, x.e.apply(S)); }
     return null;
   }
 
   MP.EVENTS = EVENTS;
   MP.drawEvent = drawEvent;
-})(window.MP = window.MP || {});
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

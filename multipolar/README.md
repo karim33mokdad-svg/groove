@@ -58,6 +58,54 @@ argue with them. That is deliberate: an opaque forecast teaches nothing.
 
 ---
 
+## The outcome simulator
+
+The game gives you one draw from the distribution. The simulator runs the board
+forward hundreds of times and shows you the distribution itself.
+
+**Outcome projection** (button on the board) — pick a horizon (1 quarter to 2
+years) and a number of runs, and it reports:
+
+- tail risks: probability of nuclear use, of your government falling, of any
+  theatre reaching major war
+- where the indices land: campaign score, oil, trade, your economy, approval and
+  nuclear risk, each as a p10–p90 range with the median and today's value marked
+- escalation by theatre: median projected rung with its range, and the
+  probability that each theatre climbs, falls, or reaches rung 7+
+
+**Decision simulator** (button on any action's forecast) — runs the same world
+twice, once with the decision and once without, and reports the **paired**
+difference: "ends ahead in 62% of 120 paired runs, median campaign score +3.1".
+
+Two design decisions make that comparison mean something:
+
+1. **Common random numbers.** The engine never calls `Math.random`; every draw
+   goes through a seeded xorshift generator. Both branches are re-seeded to the
+   same value *after* the decision is applied, so the treated and untreated
+   worlds face the same sequence of draws. The difference between them is the
+   decision, not the dice — which is why results are reported as paired
+   differences and win rates rather than as two medians pulled from independent
+   noise.
+
+2. **A disclosed approximation.** Exhaustive AI option search costs ~2,700
+   forecast evaluations per quarter; no phone will do that 600 times. Under a
+   search budget each capital scores a random subset of its options. Validated
+   against exhaustive search over 60 campaigns, the medians track closely (oil
+   $76.6 vs $75.2, campaign score 32 vs 34, identical median rungs), and the UI
+   states the approximation with every result.
+
+A 120-run projection takes ~1.9s and a 120-pair comparison ~3.1s on a desktop;
+both run chunked off the event loop with a progress bar, so the interface stays
+responsive on a phone.
+
+`node test/mc.js` checks that the same seed reproduces the identical
+distribution, that a different seed does not, that quantiles are ordered and
+in-range, that the comparison detects effects it should (nuclear signalling
+raises modelled nuclear risk and costs legitimacy; aid improves the position you
+back) and stays quiet on a null decision.
+
+---
+
 ## Modelling choices
 
 These are the assumptions the model actually encodes. They are contestable —
@@ -74,6 +122,7 @@ they are meant to be.
 | **Relationship gravity** | Warmth bought with summits and capital decays back toward structural interests. You cannot summit your way into a permanent alliance. |
 | **Domestic politics** | Approval responds to the economy, to war stress and to legitimacy — and approval generates the political capital that funds every action. Foreign policy is downstream of domestic politics. Below 12 approval your government falls and the campaign ends. |
 | **Markets** | Oil is a risk premium summed over theatres, weighted by each theatre's exposure and its rung. Trade is a drag term over chokepoint theatres. Both feed back into every economy via its own oil beta. |
+| **Randomness** | A seeded xorshift generator, never `Math.random`. Campaigns are reproducible from a seed, and the simulator can run counterfactuals on identical draws. |
 | **The AI** | Not scripted. Each capital enumerates its legal moves, scores them against its own interests, doctrinal bias, escalation tolerance and red-line exposure, and picks. It answers aggression, avoids repeating itself, and gambles more when it is losing. |
 
 ### Calibration
@@ -98,11 +147,13 @@ python3 -m http.server 8000
 The engine has no DOM dependencies, so it can be exercised headlessly:
 
 ```bash
-node test/sim.js 25
+node test/sim.js 25   # engine: full campaigns for every seat, bounds and coverage
+node test/mc.js       # simulator: reproducibility, calibration, effect detection
 ```
 
-That plays full campaigns for every seat, asserts no state leaves its bounds, no
-forecast throws, every action stays reachable, and prints the score distribution.
+`sim.js` plays full campaigns for every seat, asserts no state leaves its bounds,
+no forecast throws and every action stays reachable, then prints the score
+distribution. `mc.js` exercises the Monte Carlo layer.
 
 ---
 
@@ -124,6 +175,7 @@ js/ui/ui.js             every screen
 js/main.js              save/resume, service worker
 sw.js                   offline cache
 test/sim.js             headless engine harness
+test/mc.js              outcome-simulator harness
 ```
 
 ---
@@ -131,8 +183,12 @@ test/sim.js             headless engine harness
 ## Honest limits
 
 **This is a simulation, not a prediction.** It cannot tell you what will happen.
-It can show you how the pieces are coupled, which is the part most commentary
-leaves out.
+It can show you how the pieces are coupled, and — through the simulator — what
+this model's assumptions imply about the spread of outcomes and the marginal
+effect of a decision. Those are statements about the model, not about the world.
+A probability it prints is the frequency of an outcome across runs of these
+equations; it is not a forecast, and it inherits every judgement in the
+parameters.
 
 Figures — GDP, defence outlays, manpower, warhead counts — are rounded
 open-source approximations for a 2025/26 baseline, of the kind published by the

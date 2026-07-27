@@ -122,10 +122,23 @@
     return out;
   }
 
+  /* Monte Carlo runs thousands of quarters, and an exhaustive search of every
+     capital's option space is the whole cost of the engine. Under a budget the
+     AI evaluates a random subset instead — the sampled maximum tracks the true
+     one closely because the score distribution is heavily top-weighted. */
+  function candidateSet(S, id) {
+    const all = candidates(S, id);
+    const budget = S.__aiBudget;
+    if (!budget || all.length <= budget) return all;
+    const out = [];
+    for (let i = 0; i < budget; i++) out.push(all[Math.floor(MP.rnd() * all.length)]);
+    return out;
+  }
+
   function chooseAction(S, id, mood) {
     const P = MP.POWERS[id], ps = S.powers[id];
     const scored = [];
-    candidates(S, id).forEach(cand => {
+    candidateSet(S, id).forEach(cand => {
       let f;
       try { f = MP.forecast(S, id, cand.a, cand); } catch (e) { return; }
       if (!f || f.cost > ps.pc) return;
@@ -154,7 +167,7 @@
     const top = pool[0].score, temp = 7;
     const w = pool.map(x => Math.exp((x.score - top) / temp));
     const total = w.reduce((a, b) => a + b, 0);
-    let r = Math.random() * total;
+    let r = MP.rnd() * total;
     for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
     return pool[0];
   }
@@ -189,4 +202,4 @@
   }
 
   MP.ai = { runAI, utility, theaterWeight, chooseAction };
-})(window.MP = window.MP || {});
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

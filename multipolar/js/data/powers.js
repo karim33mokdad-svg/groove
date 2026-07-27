@@ -407,4 +407,4 @@
   MP.tradeLeverage = tradeLeverage;
   MP.powerList = Object.keys(POWERS);
   MP.playableList = Object.keys(POWERS).filter(k => POWERS[k].playable);
-})(window.MP = window.MP || {});
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

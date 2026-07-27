@@ -135,8 +135,8 @@
       t.deterrence = (t.deterrence || 0) * 0.85;
       t.defence = (t.defence || 0) * 0.88;
       /* rungs come down slowly and only when the temperature genuinely drops */
-      if (t.tension < 38 && t.rung > (T.rungFloor || 0) && Math.random() < 0.25) { t.rung -= 1; notes.push({ tag: 'DE-ESC', headline: 'Tempo falls in ' + T.name, detail: 'Activity drops back to rung ' + t.rung + ' — ' + MP.LADDER[t.rung].name + '. Ladders are climbed quickly and descended slowly.' }); }
-      else if (t.tension > 90 && t.rung < Math.min(6, T.escalationCeiling) && Math.random() < 0.16) {
+      if (t.tension < 38 && t.rung > (T.rungFloor || 0) && MP.rnd() < 0.25) { t.rung -= 1; notes.push({ tag: 'DE-ESC', headline: 'Tempo falls in ' + T.name, detail: 'Activity drops back to rung ' + t.rung + ' — ' + MP.LADDER[t.rung].name + '. Ladders are climbed quickly and descended slowly.' }); }
+      else if (t.tension > 90 && t.rung < Math.min(6, T.escalationCeiling) && MP.rnd() < 0.16) {
         t.rung += 1;
         notes.push({ tag: 'ESCALATION', headline: 'Escalation in ' + T.name, detail: 'Sustained tension produces its own momentum: rung ' + t.rung + ' — ' + MP.LADDER[t.rung].name + '. Above this level the ladder is climbed by decision, not by drift.' });
       }
@@ -145,7 +145,7 @@
          more likely somebody quietly stops. Wars end because they cost. */
       if (t.rung >= 6 && t.rung > T.rung - 1 && t.rung > (T.rungFloor || 0)) {
         const stress = (S.powers[T.sideA].warStress + S.powers[T.sideB].warStress) / 200;
-        if (Math.random() < stress * 0.15) {
+        if (MP.rnd() < stress * 0.15) {
           t.rung -= 1;
           t.tension = clamp(t.tension - 8, 0, 100);
           notes.push({ tag: 'EXHAUSTION', headline: 'Tempo drops in ' + T.name, detail: 'Neither side announces anything. Sortie rates fall, offensives are postponed, and the fighting settles a rung lower at ' + MP.LADDER[t.rung].name + '.' });
@@ -188,7 +188,7 @@
     const r = S.g.nuclearRisk;
     if (r < 55) return null;
     const hazard = Math.pow((r - 55) / 45, 2.4) * 0.22;
-    if (Math.random() > hazard) return null;
+    if (MP.rnd() > hazard) return null;
     const dyads = MP.theaterList.filter(id => MP.THEATERS[id].nuclearDyad && S.theaters[id].rung >= 7);
     const where = dyads.length ? MP.THEATERS[dyads[0]].name : 'a nuclear dyad';
     return {
@@ -300,7 +300,7 @@
 
     /* 3. events */
     const evs = [];
-    const n = 1 + (Math.random() < 0.45 ? 1 : 0);
+    const n = 1 + (MP.rnd() < 0.45 ? 1 : 0);
     for (let i = 0; i < n; i++) {
       const e = MP.drawEvent(S);
       if (!e) continue;
@@ -334,4 +334,4 @@
   MP.endTurn = endTurn;
   MP.scoreCampaign = scoreCampaign;
   MP.OBJ = OBJ;
-})(window.MP = window.MP || {});
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

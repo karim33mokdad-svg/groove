@@ -968,4 +968,4 @@
   MP.ACTION_BY_ID = BY_ID;
   MP.CATS = CATS;
   MP.helpers = { projection, coalitionWeight, towardActor, clamp, homeAdvantage };
-})(window.MP = window.MP || {});
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

@@ -7,6 +7,23 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   /* ------------------------------------------------------------------ */
+  /* Seeded RNG. The engine never calls Math.random directly: every draw  */
+  /* goes through MP.rnd. That buys two things — reproducible campaigns,  */
+  /* and *common random numbers* for the outcome simulator, so that       */
+  /* "with this action" and "without it" can be compared on identical     */
+  /* draws instead of on noise.                                           */
+  /* ------------------------------------------------------------------ */
+  let _s = (Date.now() ^ 0x9e3779b9) >>> 0;
+  function srand(seed) { _s = (seed >>> 0) || 0x9e3779b9; }
+  function rnd() {
+    /* xorshift32 — fast, adequate for this, and identical across engines */
+    _s ^= _s << 13; _s >>>= 0;
+    _s ^= _s >> 17;
+    _s ^= _s << 5; _s >>>= 0;
+    return _s / 4294967296;
+  }
+
+  /* ------------------------------------------------------------------ */
   /* The escalation ladder. Shared across all theatres so that a rung    */
   /* means the same thing everywhere — that is what makes cross-theatre  */
   /* spillover legible.                                                  */
@@ -156,9 +173,9 @@
   /* Does an action cross one of the opponent's declared thresholds? */
   function crossesRedline(actionId, S, actor, tdef, th) {
     const r = redlineProb(actionId, S, actor, tdef, th);
-    if (!r.p || Math.random() >= r.p) return null;
+    if (!r.p || rnd() >= r.p) return null;
     const O = MP.POWERS[r.opp];
-    return { opp: r.opp, line: O.redlines[Math.floor(Math.random() * O.redlines.length)] };
+    return { opp: r.opp, line: O.redlines[Math.floor(rnd() * O.redlines.length)] };
   }
 
   /* Nuclear risk: a function of the highest rung in a nuclear dyad, alert
@@ -187,4 +204,6 @@
   MP.redlineProb = redlineProb;
   MP.computeNuclearRisk = computeNuclearRisk;
   MP.clamp = clamp;
-})(window.MP = window.MP || {});
+  MP.srand = srand;
+  MP.rnd = rnd;
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

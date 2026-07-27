@@ -26,6 +26,9 @@
       <p class="tag">Take a seat at a real capital. Ten live theatres. Thirty instruments of
         statecraft. Every action gives you a modelled forecast — with its assumptions on screen —
         before you commit to it.</p>
+      <p class="tag" style="margin-top:10px">Or use it as an outcome simulator: run the board forward
+        hundreds of times and read the distribution, and test any decision against the same world
+        without it.</p>
 
       <div style="margin-top:26px">
         <button id="go-select" class="btn">Begin a campaign</button>
@@ -57,6 +60,7 @@
     <div id="mapwrap" class="mapwrap"></div>
     <div class="wrap">
       <div id="warnings"></div>
+      <button id="project-btn" class="btn ghost sm" style="margin-bottom:14px">📊 Run outcome projection</button>
       <div class="eyebrow">Your position</div>
       <div id="condition" class="card" style="margin-top:8px"></div>
 
@@ -100,6 +104,7 @@
 <script src="js/engine/resolve.js"></script>
 <script src="js/engine/ai.js"></script>
 <script src="js/engine/turn.js"></script>
+<script src="js/engine/sim.js"></script>
 <script src="js/ui/map.js"></script>
 <script src="js/ui/ui.js"></script>
 <script src="js/main.js"></script>

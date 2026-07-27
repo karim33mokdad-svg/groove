@@ -107,7 +107,7 @@
   }
 
   function jitter(v, variance) {
-    return v * (1 + (Math.random() * 2 - 1) * variance);
+    return v * (1 + (MP.rnd() * 2 - 1) * variance);
   }
 
   function applyPowerDelta(S, id, obj, variance) {
@@ -194,7 +194,7 @@
     /* complications */
     const fired = [];
     (f.risks || []).forEach(rk => {
-      if (Math.random() < rk.p) {
+      if (MP.rnd() < rk.p) {
         applyFx(S, rk.fx, actor, target, thId, 0.2);
         fired.push(rk.text);
       }
@@ -203,7 +203,7 @@
     /* the upside tail: outcomes that only occur if the gamble pays off */
     const boons = [];
     (f.boons || []).forEach(bn => {
-      if (Math.random() < bn.p) {
+      if (MP.rnd() < bn.p) {
         applyFx(S, bn.fx, actor, target, thId, 0.15);
         boons.push(bn.text);
       }
@@ -243,4 +243,4 @@
   MP.applyTheaterDelta = applyTheaterDelta;
   MP.applyGlobalDelta = applyGlobalDelta;
   MP.execute = execute;
-})(window.MP = window.MP || {});
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

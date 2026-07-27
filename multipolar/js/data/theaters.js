@@ -235,4 +235,4 @@
 
   MP.THEATERS = THEATERS;
   MP.theaterList = Object.keys(THEATERS);
-})(window.MP = window.MP || {});
+})(typeof self !== 'undefined' ? (self.MP = self.MP || {}) : (this.MP = this.MP || {}));

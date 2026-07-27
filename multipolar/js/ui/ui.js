@@ -24,10 +24,26 @@
     window.scrollTo(0, 0);
   }
   function closeSheet() { $('sheet').classList.remove('on'); }
+  function sheetChrome(b) {
+    const x = h('button', 'sheetx', '✕');
+    x.setAttribute('aria-label', 'Close');
+    x.onclick = closeSheet;
+    b.appendChild(x);
+    b.appendChild(h('div', 'grab'));
+  }
+  function openSheetKeep(build) {
+    const b = $('sheet-body');
+    const y = b.scrollTop;
+    b.innerHTML = '';
+    sheetChrome(b);
+    build(b);
+    $('sheet').classList.add('on');
+    b.scrollTop = y;
+  }
   function openSheet(build) {
     const b = $('sheet-body');
     b.innerHTML = '';
-    b.appendChild(h('div', 'grab'));
+    sheetChrome(b);
     build(b);
     $('sheet').classList.add('on');
     b.scrollTop = 0;
@@ -331,7 +347,7 @@
       if (fx.th.defence) add('Defensive coverage', fx.th.defence);
     }
     if (fx.g) {
-      if (fx.g.oil) rows.push({ label: 'Oil price', v: fx.g.oil, pct: true, invert: MP.POWERS[S.player].oilBeta < 0 });
+      if (fx.g.oil) rows.push({ label: 'Oil price', v: fx.g.oil, pct: true, invert: MP.POWERS[S.player].oilBeta <= 0.2 });
       add('Global trade index', fx.g.trade);
       add('Nuclear risk', fx.g.nuclearRisk, true);
     }
@@ -396,6 +412,9 @@
       const go = h('button', 'btn', 'Commit — ' + f.cost + ' PC');
       go.onclick = () => commit(actionId, opts);
       body.appendChild(go);
+      const sim = h('button', 'btn ghost', 'Simulate this decision first');
+      sim.onclick = () => openSimulator(Object.assign({ a: actionId }, opts));
+      body.appendChild(sim);
       const no = h('button', 'btn ghost', 'Back');
       no.onclick = closeSheet;
       body.appendChild(no);
@@ -464,7 +483,7 @@
     push('Legitimacy', a.legit, b.legit);
     push('Readiness', a.readiness, b.readiness);
     push('Coercive pressure on you', a.pressure, b.pressure, true);
-    push('Oil price', a.oil, b.oil, MP.POWERS[S.player].oilBeta > 0);
+    push('Oil price', a.oil, b.oil, MP.POWERS[S.player].oilBeta > 0.2);
     push('Global trade', a.trade, b.trade);
     push('Nuclear risk', a.nuclearRisk, b.nuclearRisk, true);
 
@@ -610,6 +629,223 @@
     });
   }
 
+  /* ================= outcome simulator ================= */
+  const SIMCFG = { horizon: 4, trials: 120 };
+
+  function fmt(v, dp) { const m = Math.pow(10, dp || 0); return Math.round(v * m) / m; }
+  function pct(v) { return Math.round(v * 100) + '%'; }
+
+  /* p10–p90 range with the median marked and today's value for reference */
+  function rangeBar(label, st, now, lo, hi, dp, prefix) {
+    const span = Math.max(0.0001, hi - lo);
+    const pos = v => clamp((v - lo) / span * 100, 0, 100);
+    return '<div class="rng"><div class="rh"><span class="muted">' + esc(label) + '</span>' +
+      '<b>' + (prefix || '') + fmt(st.p50, dp) + '</b></div>' +
+      '<div class="rt"><div class="track"></div>' +
+      '<div class="span" style="left:' + pos(st.p10) + '%;width:' + Math.max(1.5, pos(st.p90) - pos(st.p10)) + '%"></div>' +
+      '<div class="med" style="left:' + pos(st.p50) + '%"></div>' +
+      (now === null ? '' : '<div class="now" style="left:' + pos(now) + '%"></div>') +
+      '</div><div class="rl"><span>' + (prefix || '') + fmt(st.p10, dp) + '</span>' +
+      (now === null ? '' : '<span>now ' + (prefix || '') + fmt(now, dp) + '</span>') +
+      '<span>' + (prefix || '') + fmt(st.p90, dp) + '</span></div></div>';
+  }
+
+  function probBar(label, p, danger) {
+    const col = danger ? (p > 0.15 ? 'var(--red)' : p > 0.04 ? 'var(--amber)' : 'var(--green)') : 'var(--cyan)';
+    return '<div class="prob"><div class="ph"><span class="muted">' + esc(label) + '</span><b style="color:' + col + '">' +
+      pct(p) + '</b></div><div class="pb"><i style="width:' + Math.max(0.6, p * 100) + '%;background:' + col + '"></i></div></div>';
+  }
+
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function openSimulator(decision) {
+    const S = UI.S;
+    let running = false;
+    const draw = (state, result, frac) => openSheetKeep(body => {
+      body.appendChild(h('div', 'eyebrow', decision ? 'Decision simulator' : 'Outcome projection'));
+      body.appendChild(h('h2', null, decision
+        ? MP.ACTION_BY_ID[decision.a].name + ' — with vs without'
+        : 'Where does this go?'));
+      body.appendChild(h('p', 'tiny muted', decision
+        ? 'The same world, run twice from identical random draws: once with this decision taken, once without. ' +
+          'Everything below is the paired difference — the decision, not the dice.'
+        : 'The board run forward many times from here, with every capital acting and events firing. ' +
+          'Not a forecast of what will happen — the spread of what this model says can happen.'));
+
+      /* settings */
+      if (state === 'idle') {
+        body.appendChild(h('div', 'eyebrow', 'Horizon'));
+        const hz = h('div', 'simopt');
+        [[1, '1 qtr'], [2, '2 qtrs'], [4, '1 year'], [8, '2 years']].forEach(([v, t]) => {
+          const b = h('button', SIMCFG.horizon === v ? 'on' : null, t);
+          b.onclick = () => { SIMCFG.horizon = v; draw('idle', null, 0); };
+          hz.appendChild(b);
+        });
+        body.appendChild(hz);
+        body.appendChild(h('div', 'eyebrow', 'Runs'));
+        const tr = h('div', 'simopt');
+        [[60, '60'], [120, '120'], [240, '240']].forEach(([v, t]) => {
+          const b = h('button', SIMCFG.trials === v ? 'on' : null, t + ' runs');
+          b.onclick = () => { SIMCFG.trials = v; draw('idle', null, 0); };
+          tr.appendChild(b);
+        });
+        body.appendChild(tr);
+        body.appendChild(h('p', 'tiny muted', 'More runs narrow the estimate and take longer. ' +
+          (decision ? 'A decision run simulates both branches, so it costs double.' : '')));
+
+        const go = h('button', 'btn', 'Run ' + SIMCFG.trials + (decision ? ' paired' : '') + ' simulations');
+        go.onclick = () => {
+          if (running) return;
+          running = true;
+          draw('running', null, 0);
+          MP.sim.project(S, {
+            trials: SIMCFG.trials, horizon: SIMCFG.horizon, budget: 30, decision: decision
+          }, f => { const p = $('simprog'); if (p) p.style.width = Math.round(f * 100) + '%'; },
+            res => { running = false; draw('done', res, 1); });
+        };
+        body.appendChild(go);
+        const no = h('button', 'btn ghost', 'Back');
+        no.onclick = closeSheet;
+        body.appendChild(no);
+      }
+
+      if (state === 'running') {
+        body.appendChild(h('div', 'prog', '<i id="simprog" style="width:0%"></i>'));
+        body.appendChild(h('p', 'tiny muted', 'Running ' + SIMCFG.trials + (decision ? ' paired' : '') +
+          ' simulations over ' + SIMCFG.horizon + ' quarter' + (SIMCFG.horizon > 1 ? 's' : '') + '…'));
+      }
+
+      if (state === 'done' && result) {
+        body.appendChild(decision ? comparisonView(result) : projectionView(result));
+        const again = h('button', 'btn ghost', 'Change settings and re-run');
+        again.onclick = () => draw('idle', null, 0);
+        body.appendChild(again);
+        const done = h('button', 'btn', decision ? 'Back to the decision' : 'Close');
+        done.onclick = () => { if (decision) openForecast(decision.a, decision); else closeSheet(); };
+        body.appendChild(done);
+        body.appendChild(h('p', 'tiny muted', 'Method: ' + result.trials + ' runs × ' + result.horizon +
+          ' quarters. Rival capitals score a sampled subset of their options rather than every one — ' +
+          'an approximation that keeps this fast enough to run on a phone and tracks the exhaustive ' +
+          'search closely, but it is an approximation.'));
+      }
+    });
+    draw('idle', null, 0);
+  }
+
+  function projectionView(r) {
+    const S = UI.S, box = h('div');
+    const c = r.control, b = r.baseline;
+
+    const risks = h('div', 'card');
+    risks.innerHTML = '<div class="eyebrow">Tail risks over ' + r.horizon + ' quarter' + (r.horizon > 1 ? 's' : '') + '</div>' +
+      probBar('Nuclear weapon used anywhere', c.rate.nuclearUsed, true) +
+      probBar('Your government falls', c.rate.govFell, true) +
+      probBar('Some theatre reaches major war (rung 7+)', c.rate.majorWar, true);
+    box.appendChild(risks);
+
+    const dist = h('div', 'card');
+    dist.innerHTML = '<div class="eyebrow">Where things land</div>' +
+      rangeBar('Campaign score', c.dist.score, b.score, 0, 100, 0) +
+      rangeBar('Oil price', c.dist.oil, b.oil, Math.min(c.dist.oil.p10, b.oil) * 0.94, Math.max(c.dist.oil.p90, b.oil) * 1.06, 0, '$') +
+      rangeBar('Global trade index', c.dist.trade, b.trade, 55, 115, 0) +
+      rangeBar('Your economy', c.dist.econ, b.econ, 80, 120, 1) +
+      rangeBar('Your approval', c.dist.approval, b.approval, 0, 100, 0) +
+      rangeBar('Nuclear risk index', c.dist.nuclearRisk, b.nuclearRisk, 0, 100, 0);
+    box.appendChild(dist);
+
+    const th = h('div', 'card');
+    const rows = MP.theaterList.map(t => ({ t, d: c.th[t] }))
+      .sort((x, y) => (y.d.pUp + y.d.pWar) - (x.d.pUp + x.d.pWar));
+    th.innerHTML = '<div class="eyebrow">Escalation by theatre</div>' +
+      rows.map(({ t, d }) => {
+        const T = MP.THEATERS[t], cur = b.rungs[t];
+        const col = d.pUp > 0.4 ? 'var(--red)' : d.pUp > 0.2 ? 'var(--amber)' : 'var(--dim)';
+        return '<div class="factor"><div class="fh"><span>' + esc(T.name) + '</span>' +
+          '<b style="color:' + col + '">rung ' + cur + ' → ' + fmt(d.rung.p50, 0) +
+          ' <span style="color:var(--dimmer);font-weight:500">(' + fmt(d.rung.p10, 0) + '–' + fmt(d.rung.p90, 0) + ')</span></b></div>' +
+          '<div class="fn">escalates ' + pct(d.pUp) + ' · de-escalates ' + pct(d.pDown) +
+          (d.pWar > 0.005 ? ' · <span style="color:var(--red)">major war ' + pct(d.pWar) + '</span>' : '') +
+          ' · your side ends near ' + fmt(d.standing.p50, 0) + '%</div></div>';
+      }).join('');
+    box.appendChild(th);
+
+    box.appendChild(h('div', 'note', readProjection(r)));
+    return box;
+  }
+
+  function readProjection(r) {
+    const c = r.control, b = r.baseline;
+    const worst = MP.theaterList.map(t => ({ t, p: c.th[t].pUp })).sort((x, y) => y.p - x.p)[0];
+    const oilDir = c.dist.oil.p50 > b.oil + 1 ? 'rising' : c.dist.oil.p50 < b.oil - 1 ? 'falling' : 'roughly flat';
+    const bits = [];
+    bits.push('<b>Read:</b> on current settings the model puts your campaign score between ' +
+      fmt(c.dist.score.p10, 0) + ' and ' + fmt(c.dist.score.p90, 0) + ' in eight runs out of ten, with oil ' +
+      oilDir + '.');
+    bits.push(' The theatre most likely to climb is <b>' + esc(MP.THEATERS[worst.t].name) + '</b> at ' +
+      pct(worst.p) + '.');
+    if (c.rate.nuclearUsed > 0.01) bits.push(' Nuclear use appears in ' + pct(c.rate.nuclearUsed) +
+      ' of runs — that is the number worth acting on before any other.');
+    if (c.rate.govFell > 0.05) bits.push(' Your own position is the binding constraint: the government falls in ' +
+      pct(c.rate.govFell) + ' of runs.');
+    return bits.join('');
+  }
+
+  function comparisonView(r) {
+    const box = h('div'), cmp = r.compare;
+    const score = cmp.rows.find(x => x.key === 'score');
+
+    const verdict = h('div', 'verdict');
+    const better = score.pBetter;
+    const head = better > 0.65 ? 'Clearly better than not acting'
+      : better > 0.55 ? 'Modestly better than not acting'
+        : better > 0.45 ? 'Roughly a wash'
+          : better > 0.35 ? 'Modestly worse than not acting'
+            : 'Clearly worse than not acting';
+    verdict.innerHTML = '<div class="vt">' + head + '</div><div class="vs">Ends ahead in <b>' + pct(better) +
+      '</b> of ' + r.trials + ' paired runs. Median campaign score ' +
+      (score.median >= 0 ? '+' : '') + fmt(score.median, 1) +
+      ', with the middle eighty per cent of outcomes between ' + fmt(score.p10, 1) + ' and ' + fmt(score.p90, 1) + '.</div>';
+    box.appendChild(verdict);
+
+    const tbl = h('div', 'card');
+    tbl.innerHTML = '<div class="eyebrow">Paired difference (with − without)</div>' +
+      cmp.rows.filter(x => x.key !== 'score' && (Math.abs(x.median) > 0.05 || Math.abs(x.p90 - x.p10) > 0.5))
+        .map(x => {
+          const good = x.goodIfUp ? x.median > 0 : x.median < 0;
+          return '<div class="cmp"><span class="lbl">' + esc(x.label) + '</span><span class="cv">' +
+            '<span class="cd ' + (Math.abs(x.median) < 0.05 ? '' : good ? 'val pos' : 'val neg') + '">' +
+            (x.median >= 0 ? '+' : '') + fmt(x.median, 1) + '</span>' +
+            '<span class="cw">better in ' + pct(x.pBetter) + ' of runs</span></span></div>';
+        }).join('') || '<p class="tiny muted" style="margin-top:8px">No measurable difference on any index.</p>';
+    box.appendChild(tbl);
+
+    const rates = h('div', 'card');
+    rates.innerHTML = '<div class="eyebrow">Tail risks — without → with</div>' +
+      cmp.rateRows.map(x => {
+        const d = x.treated - x.control;
+        const col = d > 0.01 ? 'var(--red)' : d < -0.01 ? 'var(--green)' : 'var(--dim)';
+        return '<div class="cmp"><span class="lbl">' + esc(x.label) + '</span><span class="cv">' +
+          '<span class="cd">' + pct(x.control) + ' → <span style="color:' + col + '">' + pct(x.treated) + '</span></span></div></div>';
+      }).join('');
+    box.appendChild(rates);
+
+    if (cmp.thRows.length) {
+      const th = h('div', 'card');
+      th.innerHTML = '<div class="eyebrow">Effect by theatre</div>' +
+        cmp.thRows.map(x => '<div class="factor"><div class="fh"><span>' + esc(x.name) + '</span><b style="color:' +
+          (x.rungMean > 0.03 ? 'var(--red)' : x.rungMean < -0.03 ? 'var(--green)' : 'var(--dim)') + '">' +
+          (x.standingDelta >= 0 ? '+' : '') + fmt(x.standingDelta, 1) + ' position</b></div>' +
+          '<div class="fn">escalates more often in ' + pct(x.pWorse) + ' of runs, less often in ' + pct(x.pBetter) +
+          ' · mean rung effect ' + (x.rungMean >= 0 ? '+' : '') + fmt(x.rungMean, 2) + '</div></div>').join('');
+      box.appendChild(th);
+    }
+    if (r.unavailable) {
+      box.appendChild(h('div', 'warn', 'The decision was unavailable in ' + r.unavailable +
+        ' run(s); those pairs understate its effect.'));
+    }
+    return box;
+  }
+
   /* ================= misc ================= */
   let toastT = null;
   function toast(msg) {
@@ -653,6 +889,20 @@
           'Relationships have gravity: warmth bought with summits decays back toward structural interests.'
         ].map(x => '<div class="obj">' + esc(x) + '</div>').join('')));
       body.appendChild(h('div', 'card',
+        '<div class="eyebrow">The outcome simulator</div>' +
+        '<p class="tiny muted" style="margin:6px 0 8px">Playing gives you one draw from the ' +
+        'distribution. The simulator runs the board forward hundreds of times and shows you the ' +
+        'distribution itself — and, for a specific decision, the same world with and without it.</p>' +
+        ['Both branches are re-seeded identically after the decision, so the two worlds face the ' +
+          'same draws. Differences are reported as PAIRED — the decision, not the dice.',
+          '"Better in 62% of runs" is the honest headline number. A median difference with no ' +
+          'win-rate behind it can be pure noise.',
+          'To keep it fast on a phone, rival capitals score a random subset of their options rather ' +
+          'than all of them. The sampled choice tracks the exhaustive one closely, but it is an ' +
+          'approximation, and the sample size is shown with every result.',
+          'More runs narrow the estimate. If a difference flips sign between runs, it was never real.'
+        ].map(x => '<div class="obj">' + esc(x) + '</div>').join('')));
+      body.appendChild(h('div', 'card',
         '<div class="eyebrow">Figures</div><p class="tiny muted" style="margin-top:6px">' +
         'GDP, defence outlays, manpower and warhead counts are rounded open-source approximations for a ' +
         '2025/26 baseline, of the kind published by the IMF, SIPRI, IISS and FAS. They are tuned for ' +
@@ -686,6 +936,7 @@
     $('instruments').onclick = openInstruments;
     $('sheet-scrim').onclick = closeSheet;
     $('log-btn').onclick = openLog;
+    $('project-btn').onclick = () => openSimulator(null);
 
     const saved = MP.load();
     if (saved && !saved.over) {
@@ -696,5 +947,5 @@
     }
   }
 
-  MP.ui = { init, show, renderBoard, toast, UI };
+  MP.ui = { init, show, renderBoard, toast, openSimulator, UI };
 })(window.MP = window.MP || {});
