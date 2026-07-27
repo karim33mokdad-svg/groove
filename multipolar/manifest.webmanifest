@@ -1,0 +1,14 @@
+{
+  "name": "MULTIPOLAR — geopolitical strategy",
+  "short_name": "Multipolar",
+  "description": "A turn-based geopolitical strategy game with a transparent forecasting model.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080b12",
+  "theme_color": "#080b12",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
