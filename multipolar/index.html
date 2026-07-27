@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#080b12">
+<meta name="description" content="A geopolitical strategy game: take a seat at a real capital, use the real instruments of statecraft, and see the modelled consequences before you commit.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>MULTIPOLAR — geopolitical strategy</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ SPLASH ============ -->
+  <section id="scr-splash" class="screen on">
+    <div class="splash">
+      <div class="eyebrow">A strategy game about the world as it is</div>
+      <h1>MULTI<span>POLAR</span></h1>
+      <div class="rule"></div>
+      <p class="tag">Take a seat at a real capital. Ten live theatres. Thirty instruments of
+        statecraft. Every action gives you a modelled forecast — with its assumptions on screen —
+        before you commit to it.</p>
+
+      <div style="margin-top:26px">
+        <button id="go-select" class="btn">Begin a campaign</button>
+        <button id="resume-btn" class="btn ghost hide">Resume</button>
+        <button id="about-1" class="btn ghost">How the model works</button>
+      </div>
+
+      <p class="disc">A simulation, not a prediction. Figures are rounded open-source approximations
+        for a 2026 baseline. Not affiliated with any government. Real conflicts kill real people —
+        this game abstracts a human cost it cannot represent honestly.</p>
+    </div>
+  </section>
+
+  <!-- ============ SELECT ============ -->
+  <section id="scr-select" class="screen">
+    <div class="wrap">
+      <div id="select-body"></div>
+    </div>
+    <div class="bottom">
+      <button id="back-splash" class="btn ghost">Back</button>
+      <button id="start-btn" class="btn" disabled>Select a capital</button>
+    </div>
+  </section>
+
+  <!-- ============ BOARD ============ -->
+  <section id="scr-board" class="screen">
+    <div id="topbar" class="top"></div>
+    <div id="indices" class="idx"></div>
+    <div id="mapwrap" class="mapwrap"></div>
+    <div class="wrap">
+      <div id="warnings"></div>
+      <div class="eyebrow">Your position</div>
+      <div id="condition" class="card" style="margin-top:8px"></div>
+
+      <div class="row between" style="margin:16px 0 8px">
+        <div class="eyebrow">Theatres</div>
+        <button id="log-btn" class="tiny muted" style="text-decoration:underline">decision log</button>
+      </div>
+      <div id="theaters"></div>
+
+      <button id="about-2" class="btn ghost sm" style="margin-top:14px">How the model works</button>
+    </div>
+    <div class="bottom">
+      <button id="instruments" class="btn ghost">Instruments</button>
+      <button id="endturn" class="btn">End quarter ▸</button>
+    </div>
+  </section>
+
+  <!-- ============ BRIEFING ============ -->
+  <section id="scr-brief" class="screen">
+    <div class="wrap"><div id="brief-body"></div></div>
+  </section>
+
+  <!-- ============ END ============ -->
+  <section id="scr-end" class="screen">
+    <div class="wrap"><div id="end-body"></div></div>
+  </section>
+
+</div>
+
+<!-- ============ SHEET ============ -->
+<div id="sheet" class="sheet">
+  <div id="sheet-scrim" class="scrim"></div>
+  <div id="sheet-body" class="body"></div>
+</div>
+
+<script src="js/data/powers.js"></script>
+<script src="js/data/theaters.js"></script>
+<script src="js/data/actions.js"></script>
+<script src="js/data/events.js"></script>
+<script src="js/engine/core.js"></script>
+<script src="js/engine/resolve.js"></script>
+<script src="js/engine/ai.js"></script>
+<script src="js/engine/turn.js"></script>
+<script src="js/ui/map.js"></script>
+<script src="js/ui/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
