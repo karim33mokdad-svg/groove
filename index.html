@@ -57,6 +57,12 @@
     font-size:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     -webkit-user-select:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.45);}
   .cam:active{transform:scale(.95);}
+  .music{position:absolute;bottom:9.5%;right:32%;width:66px;height:66px;border-radius:50%;z-index:6;
+    background:radial-gradient(circle at 50% 40%,#5a3a8a,#241338);border:1px solid #7a5aa8;color:#fff;
+    font-size:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    -webkit-user-select:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.45);}
+  .music:active{transform:scale(.95);}
+  .music.think{animation:glow 1s infinite;}
   .qline{position:absolute;top:70.5%;left:7%;right:7%;text-align:center;color:#cfcfcf;
     font-size:13px;min-height:34px;z-index:5;opacity:.85;line-height:1.3;}
   .qline .src-local{color:#37e6a4;}.qline .src-ai{color:#5cc8ff;}.qline .src-none{color:#ff6b6b;}
@@ -96,6 +102,7 @@
     <div class="connect" id="connect">Connect</div>
     <div class="qline" id="qline"></div>
     <div class="pin" id="pin">PIN</div>
+    <div class="music" id="musicBtn">🎵</div>
     <div class="cam" id="camBtn">📷</div>
     <input id="camInput" type="file" accept="image/*" capture="environment" style="display:none">
     <div class="foot">speedquizzing.com</div>
@@ -114,6 +121,8 @@
       </select>
       <label class="fld">API key</label>
       <input id="apikey" type="password" placeholder="Paste your key (stored on this phone only)">
+      <label class="fld">Music round — AudD token (free at dashboard.audd.io)</label>
+      <input id="audd" type="password" placeholder="AudD API token for the 🎵 button">
       <label class="fld">Voice speed</label>
       <select id="rate">
         <option value="1.35">Fast (recommended)</option>
@@ -409,7 +418,7 @@ async function handleImage(file){
 }
 
 /* ---- config (this device only) ---- */
-const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35, showAnswer:true, decoy:"FRENCH FRIES", kbFirst:true, brain:"llama", micMode:"onboard"};
+const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35, showAnswer:true, decoy:"FRENCH FRIES", kbFirst:true, brain:"llama", micMode:"onboard", auddToken:""};
 const DECOYS = ["FRENCH FRIES","POP MUSIC","THE MOVIES","SPORT","GENERAL KNOWLEDGE","THE 1970s","GEOGRAPHY","SCIENCE","HISTORY","FOOD & DRINK","TV & FILM","MUSIC","NATURE","ART"];
 let decoyIdx = 0;
 const $ = id=>document.getElementById(id);
@@ -417,7 +426,7 @@ const banner=$("banner"), connect=$("connect"), qline=$("qline"), pin=$("pin"), 
 function bannerRest(){ const d=cfg.decoy||"FRENCH FRIES"; banner.textContent=d; fitBanner(d); }
 function renderCfg(){
   $("provider").value=cfg.provider; $("apikey").value=cfg.apikey; $("rate").value=String(cfg.rate);
-  $("decoy").value=cfg.decoy;
+  $("decoy").value=cfg.decoy; $("audd").value=cfg.auddToken||"";
   $("tgVoice").classList.toggle("on",cfg.voice); $("tgVoice").textContent=cfg.voice?"🔊 Earphone voice ON":"🔇 Earphone voice OFF";
   $("modeShow").classList.toggle("on",cfg.showAnswer);
   $("modeStealth").classList.toggle("on",!cfg.showAnswer);
@@ -437,7 +446,7 @@ function loadCfg(){
 }
 function saveCfg(){
   cfg.provider=$("provider").value; cfg.apikey=$("apikey").value; cfg.rate=parseFloat($("rate").value);
-  cfg.decoy=($("decoy").value.trim()||"FRENCH FRIES");
+  cfg.decoy=($("decoy").value.trim()||"FRENCH FRIES"); cfg.auddToken=$("audd").value.trim();
   try{localStorage.setItem("gcc",JSON.stringify(cfg));}catch(e){}
 }
 
@@ -495,14 +504,49 @@ async function answerQuestion(q){
 
 /* ---- Whisper (noise-robust) listening: record audio → Groq/OpenAI Whisper ---- */
 let mediaRec=null, audioChunks=[], micStream=null, recMime='audio/mp4';
-async function startWhisper(){
+async function startRecord(processed){
   audioChunks=[];
-  micStream=await navigator.mediaDevices.getUserMedia({audio:{noiseSuppression:true,echoCancellation:true,autoGainControl:true}});
+  const ac = processed ? {noiseSuppression:true,echoCancellation:true,autoGainControl:true}
+                       : {noiseSuppression:false,echoCancellation:false,autoGainControl:false};   // raw audio for music
+  micStream=await navigator.mediaDevices.getUserMedia({audio:ac});
   recMime = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/mp4')) ? 'audio/mp4'
           : (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm' : '';
   mediaRec = recMime ? new MediaRecorder(micStream,{mimeType:recMime}) : new MediaRecorder(micStream);
   mediaRec.ondataavailable=e=>{ if(e.data && e.data.size) audioChunks.push(e.data); };
   mediaRec.start();
+}
+async function startWhisper(){ return startRecord(true); }
+
+/* ---- Music round: "Shazam" via AudD ---- */
+let musicBusy=false;
+async function identifyMusic(blob){
+  const token=(cfg.auddToken||'').trim(); if(!token) return {err:'Add an AudD token in PIN'};
+  if(!blob || !blob.size) return {err:'no audio'};
+  const fd=new FormData(); fd.append('api_token',token); fd.append('file',blob,'clip.'+(((blob.type||'').includes('webm'))?'webm':'m4a'));
+  const r=await fetch('https://api.audd.io/',{method:'POST',body:fd});
+  const j=await r.json();
+  if(j.status!=='success') return {err:(j.error&&j.error.error_message)||'recognition failed'};
+  if(!j.result) return {err:'No match — try a clearer/longer clip'};
+  const t=j.result.title||'', a=j.result.artist||'';
+  return {ans:(t && a) ? (t+' — '+a) : (t||a||'Unknown')};
+}
+async function handleMusic(){
+  if(musicBusy) return; musicBusy=true; ttsPrimed=true;
+  const mb=$("musicBtn"); mb.classList.add('think');
+  connect.classList.add('think'); if(cfg.showAnswer){ banner.textContent="🎵 …"; banner.style.fontSize="30px"; }
+  qline.textContent="Listening to the track…";
+  try{
+    await startRecord(false);
+    await new Promise(r=>setTimeout(r,8000));      // listen ~8s
+    qline.textContent="Identifying…";
+    const blob=await stopWhisper();
+    const out=await identifyMusic(blob);
+    connect.classList.remove('think'); mb.classList.remove('think'); qline.textContent="";
+    if(out.ans){ lastAnswer=out.ans; if(cfg.showAnswer){ banner.textContent=out.ans; fitBanner(out.ans); } else { bannerRest(); } speak(out.ans); }
+    else { banner.textContent=(out.err||"No match").slice(0,60); banner.style.fontSize="14px"; }
+  }catch(e){ connect.classList.remove('think'); mb.classList.remove('think'); qline.textContent="";
+    banner.textContent=(e.message||'mic error').slice(0,60); banner.style.fontSize="13px"; }
+  musicBusy=false;
 }
 function stopWhisper(){ return new Promise((res)=>{
   if(!mediaRec){ res(null); return; }
@@ -590,6 +634,7 @@ document.querySelector('.logo').addEventListener('click',()=>{   // tap the logo
   renderCfg(); try{localStorage.setItem('gcc',JSON.stringify(cfg));}catch(e){}
 });
 pin.addEventListener('click',()=>{ primeTTS(); sheet.classList.add('open'); });
+$("musicBtn").addEventListener('click',handleMusic);   // music round — Shazam via AudD
 $("camBtn").addEventListener('click',()=>{ ttsPrimed=true; $("camInput").click(); });   // picture round
 $("camInput").addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) handleImage(f); });
 sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
