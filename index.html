@@ -134,6 +134,16 @@
         <div class="segbtn" id="srcKb">70s sheet + AI</div>
         <div class="segbtn" id="srcAi">AI only (any theme)</div>
       </div>
+      <label class="fld" style="margin-top:16px">Brain (text answers)</label>
+      <div class="seg">
+        <div class="segbtn" id="brainFast">Llama 70B · fast</div>
+        <div class="segbtn" id="brainSmart">GPT-OSS 120B · smart</div>
+      </div>
+      <label class="fld" style="margin-top:16px">Microphone</label>
+      <div class="seg">
+        <div class="segbtn" id="micOnboard">Instant</div>
+        <div class="segbtn" id="micWhisper">Whisper · noise-robust</div>
+      </div>
       <label class="fld" style="margin-top:16px">Manual question (backup if the mic misfires)</label>
       <div class="mrow"><input id="manualq" placeholder="Type a question…" autocomplete="off"><button id="mgo">GO</button></div>
       <button class="save" id="save">Save &amp; close</button>
@@ -319,11 +329,14 @@ async function aiSearch(q){
   try{
     if(provider==="groq" || provider==="openai"){
       const url = provider==="groq" ? "https://api.groq.com/openai/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
-      const model = provider==="groq" ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
+      const gptoss = provider==="groq" && cfg.brain==="gptoss";
+      const model = provider==="openai" ? "gpt-4o-mini" : (gptoss ? "openai/gpt-oss-120b" : "llama-3.3-70b-versatile");
+      const body = {model,temperature:0,max_tokens:gptoss?512:32,messages:[{role:"system",content:sys},{role:"user",content:q}]};
+      if(gptoss) body.reasoning_effort="low";   // smart brain: brief reasoning, stripped below
       const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-        body:JSON.stringify({model,temperature:0,max_tokens:24,messages:[{role:"system",content:sys},{role:"user",content:q}]})});
+        body:JSON.stringify(body)});
       const j = await r.json(); if(j.error) throw new Error(j.error.message||"api error");
-      return (j.choices?.[0]?.message?.content||"").trim();
+      return cleanAns(j.choices?.[0]?.message?.content||"");
     }
     if(provider==="anthropic"){
       const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
@@ -396,7 +409,7 @@ async function handleImage(file){
 }
 
 /* ---- config (this device only) ---- */
-const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35, showAnswer:true, decoy:"FRENCH FRIES", kbFirst:true};
+const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35, showAnswer:true, decoy:"FRENCH FRIES", kbFirst:true, brain:"llama", micMode:"onboard"};
 const DECOYS = ["FRENCH FRIES","POP MUSIC","THE MOVIES","SPORT","GENERAL KNOWLEDGE","THE 1970s","GEOGRAPHY","SCIENCE","HISTORY","FOOD & DRINK","TV & FILM","MUSIC","NATURE","ART"];
 let decoyIdx = 0;
 const $ = id=>document.getElementById(id);
@@ -410,6 +423,10 @@ function renderCfg(){
   $("modeStealth").classList.toggle("on",!cfg.showAnswer);
   $("srcKb").classList.toggle("on",cfg.kbFirst);
   $("srcAi").classList.toggle("on",!cfg.kbFirst);
+  $("brainFast").classList.toggle("on",cfg.brain!=="gptoss");
+  $("brainSmart").classList.toggle("on",cfg.brain==="gptoss");
+  $("micOnboard").classList.toggle("on",cfg.micMode!=="whisper");
+  $("micWhisper").classList.toggle("on",cfg.micMode==="whisper");
   bannerRest();
 }
 function loadCfg(){
@@ -476,7 +493,39 @@ async function answerQuestion(q){
   else { render("NO MATCH",q,"none",null,t0); }
 }
 
-/* ---- hold-to-record speech recognition ---- */
+/* ---- Whisper (noise-robust) listening: record audio → Groq/OpenAI Whisper ---- */
+let mediaRec=null, audioChunks=[], micStream=null, recMime='audio/mp4';
+async function startWhisper(){
+  audioChunks=[];
+  micStream=await navigator.mediaDevices.getUserMedia({audio:{noiseSuppression:true,echoCancellation:true,autoGainControl:true}});
+  recMime = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/mp4')) ? 'audio/mp4'
+          : (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm' : '';
+  mediaRec = recMime ? new MediaRecorder(micStream,{mimeType:recMime}) : new MediaRecorder(micStream);
+  mediaRec.ondataavailable=e=>{ if(e.data && e.data.size) audioChunks.push(e.data); };
+  mediaRec.start();
+}
+function stopWhisper(){ return new Promise((res)=>{
+  if(!mediaRec){ res(null); return; }
+  mediaRec.onstop=()=>{ try{ micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+    const blob=new Blob(audioChunks,{type:(mediaRec&&mediaRec.mimeType)||recMime||'audio/mp4'}); mediaRec=null; res(blob); };
+  try{ mediaRec.stop(); }catch(e){ res(null); }
+});}
+async function whisperTranscribe(blob){
+  const key=(cfg.apikey||'').trim(); if(!key) throw new Error('add API key in PIN');
+  if(!blob || !blob.size) return '';
+  const ext = ((blob.type||'').includes('webm')) ? 'webm' : 'm4a';
+  const fd=new FormData(); fd.append('file', blob, 'q.'+ext);
+  let url, model;
+  if(cfg.provider==='openai'){ url='https://api.openai.com/v1/audio/transcriptions'; model='whisper-1'; }
+  else if(cfg.provider==='anthropic'){ throw new Error('Whisper needs a Groq or OpenAI key'); }
+  else { url='https://api.groq.com/openai/v1/audio/transcriptions'; model='whisper-large-v3-turbo'; }
+  fd.append('model',model); fd.append('response_format','json'); fd.append('language','en');
+  const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+key},body:fd});
+  const j=await r.json(); if(j.error) throw new Error(j.error.message||'whisper error');
+  return (j.text||'').trim();
+}
+
+/* ---- hold-to-record speech recognition (on-device / instant) ---- */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recog=null, holding=false, finalText="", interimText="";
 function initRecog(){
@@ -502,12 +551,22 @@ function beginHold(ev){ ev.preventDefault(); if(holding) return; holding=true;
   finalText=""; interimText=""; qline.textContent="";
   connect.classList.remove('think'); connect.classList.add('rec'); connect.textContent="LISTENING";
   if(cfg.showAnswer){ banner.textContent="…"; banner.style.fontSize="34px"; }
+  if(cfg.micMode==="whisper"){ startWhisper().catch(()=>{ holding=false; connect.classList.remove('rec'); connect.textContent="Connect"; qline.innerHTML="<span class='src-none'>Allow microphone, then hold again.</span>"; }); return; }
   if(!recog) initRecog();   // fresh recognition each time (old one was torn down to free audio)
   if(recog){ try{recog.start();}catch(_){ try{recog.stop();}catch(e){} setTimeout(()=>{try{recog.start();}catch(e){}},150);} }
 }
-function endHold(ev){ if(!holding) return; if(ev&&ev.preventDefault) ev.preventDefault(); holding=false;
+async function endHold(ev){ if(!holding) return; if(ev&&ev.preventDefault) ev.preventDefault(); holding=false;
   primeTTS();                                       // unlock voice inside this release gesture
   connect.classList.remove('rec'); connect.textContent="Connect";
+  if(cfg.micMode==="whisper"){
+    connect.classList.add('think'); if(cfg.showAnswer){ banner.textContent="…"; banner.style.fontSize="34px"; }
+    try{ const blob=await stopWhisper(); const text=blob ? await whisperTranscribe(blob) : "";
+      connect.classList.remove('think');
+      if(text) answerQuestion(text);
+      else { if(cfg.showAnswer) bannerRest(); qline.innerHTML="<span class='src-none'>Didn't catch that — try again</span>"; }
+    }catch(e){ connect.classList.remove('think'); if(cfg.showAnswer) bannerRest(); qline.innerHTML="<span class='src-none'>"+(e.message||'mic error')+"</span>"; }
+    return;
+  }
   if(recog){ try{recog.stop();}catch(_){} }        // onend → answer
   else { const q=qline.textContent.trim(); if(q) answerQuestion(q); }
 }
@@ -541,6 +600,10 @@ $("modeShow").addEventListener('click',()=>{ cfg.showAnswer=true; saveCfg(); ren
 $("modeStealth").addEventListener('click',()=>{ cfg.showAnswer=false; saveCfg(); renderCfg(); });
 $("srcKb").addEventListener('click',()=>{ cfg.kbFirst=true; saveCfg(); renderCfg(); });
 $("srcAi").addEventListener('click',()=>{ cfg.kbFirst=false; saveCfg(); renderCfg(); });
+$("brainFast").addEventListener('click',()=>{ cfg.brain="llama"; saveCfg(); renderCfg(); });
+$("brainSmart").addEventListener('click',()=>{ cfg.brain="gptoss"; saveCfg(); renderCfg(); });
+$("micOnboard").addEventListener('click',()=>{ cfg.micMode="onboard"; saveCfg(); renderCfg(); });
+$("micWhisper").addEventListener('click',()=>{ cfg.micMode="whisper"; saveCfg(); renderCfg(); });
 $("mgo").addEventListener('click',()=>{ const v=$("manualq").value; $("manualq").value=""; sheet.classList.remove('open'); answerQuestion(v); });
 $("manualq").addEventListener('keydown',e=>{ if(e.key==="Enter") $("mgo").click(); });
 
