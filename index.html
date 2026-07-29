@@ -365,7 +365,7 @@ async function visionSearch(dataUrl){
     const openai = cfg.provider==="openai";
     const url = openai ? "https://api.openai.com/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
     const models = openai ? ["gpt-4o-mini"] :
-      ["meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct","llama-3.2-90b-vision-preview","llama-3.2-11b-vision-preview"];
+      ["qwen/qwen3.6-27b","meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct"];
     let lastErr="";
     for(const model of models){
       const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
@@ -385,7 +385,7 @@ async function handleImage(file){
   const out=await visionSearch(dataUrl);
   connect.classList.remove('think');
   if(out.ans){ lastAnswer=out.ans; if(cfg.showAnswer){ banner.textContent=out.ans; fitBanner(out.ans); } else { bannerRest(); } speak(out.ans); }
-  else { banner.textContent=out.err||"NO MATCH"; banner.style.fontSize="15px"; }
+  else { banner.textContent=(out.err||"NO MATCH").slice(0,70); banner.style.fontSize="13px"; }
 }
 
 /* ---- config (this device only) ---- */
