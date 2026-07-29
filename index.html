@@ -350,7 +350,10 @@ function downscale(file,max,q){ return new Promise((res)=>{
     img.src=url;
   }catch(e){ res(null); }
 });}
-const VISION_PROMPT="Identify the single main subject of this image for a quiz answer — it may be a person, place, landmark, flag, film scene, album cover, logo, artwork, animal or object. Reply with ONLY the name, 6 words or fewer. No explanation.";
+const VISION_PROMPT="Identify the single main subject of this image for a quiz answer — it may be a person, place, landmark, flag, film scene, album cover, logo, artwork, animal or object. Reply with ONLY the name, 6 words or fewer. No explanation, no reasoning.";
+function cleanAns(s){ s=String(s).replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<\/?think>/gi,'');
+  s=s.trim().replace(/^(answer|the answer is)\s*[:\-]?\s*/i,'').replace(/^["'`]+|["'`.]+$/g,'').trim();
+  return s; }
 async function visionSearch(dataUrl){
   const key=(cfg.apikey||"").trim(); if(!key||cfg.provider==="none") return {err:"Add an API key in PIN"};
   try{
@@ -360,20 +363,21 @@ async function visionSearch(dataUrl){
         "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model:"claude-3-5-sonnet-latest",max_tokens:40,messages:[{role:"user",content:[
           {type:"image",source:{type:"base64",media_type:m[1],data:m[2]}},{type:"text",text:VISION_PROMPT}]}]})});
-      const j=await r.json(); if(j.error) return {err:j.error.message}; return {ans:(j.content?.[0]?.text||"").trim()};
+      const j=await r.json(); if(j.error) return {err:j.error.message}; return {ans:cleanAns(j.content?.[0]?.text||"")};
     }
     const openai = cfg.provider==="openai";
     const url = openai ? "https://api.openai.com/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
     const models = openai ? ["gpt-4o-mini"] :
       ["qwen/qwen3.6-27b","meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct"];
+    const promptText = VISION_PROMPT + (openai ? "" : " /no_think");
     let lastErr="";
     for(const model of models){
       const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
-        body:JSON.stringify({model,temperature:0,max_tokens:40,messages:[{role:"user",content:[
-          {type:"text",text:VISION_PROMPT},{type:"image_url",image_url:{url:dataUrl}}]}]})});
+        body:JSON.stringify({model,temperature:0,max_tokens:512,messages:[{role:"user",content:[
+          {type:"text",text:promptText},{type:"image_url",image_url:{url:dataUrl}}]}]})});
       const j=await r.json();
       if(j.error){ lastErr=j.error.message||"error"; if(/model|decommission|not found|does not exist|unsupported/i.test(lastErr)) continue; return {err:lastErr}; }
-      return {ans:(j.choices?.[0]?.message?.content||"").trim()};
+      return {ans:cleanAns(j.choices?.[0]?.message?.content||"")};
     }
     return {err:lastErr||"no vision model available"};
   }catch(e){ return {err:e.message}; }
