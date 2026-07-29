@@ -52,6 +52,11 @@
     background:#f4b45f;border:6px solid #f8cd93;color:#1c1c1c;font-weight:800;font-size:22px;
     display:flex;align-items:center;justify-content:center;cursor:pointer;
     -webkit-user-select:none;user-select:none;letter-spacing:1px;}
+  .cam{position:absolute;bottom:9.5%;right:9%;width:74px;height:74px;border-radius:50%;z-index:6;
+    background:radial-gradient(circle at 50% 40%,#3d3d3d,#1b1b1b);border:1px solid #4d4d4d;color:#fff;
+    font-size:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    -webkit-user-select:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.45);}
+  .cam:active{transform:scale(.95);}
   .qline{position:absolute;top:70.5%;left:7%;right:7%;text-align:center;color:#cfcfcf;
     font-size:13px;min-height:34px;z-index:5;opacity:.85;line-height:1.3;}
   .qline .src-local{color:#37e6a4;}.qline .src-ai{color:#5cc8ff;}.qline .src-none{color:#ff6b6b;}
@@ -91,6 +96,8 @@
     <div class="connect" id="connect">Connect</div>
     <div class="qline" id="qline"></div>
     <div class="pin" id="pin">PIN</div>
+    <div class="cam" id="camBtn">📷</div>
+    <input id="camInput" type="file" accept="image/*" capture="environment" style="display:none">
     <div class="foot">speedquizzing.com</div>
   </div>
 
@@ -329,6 +336,58 @@ async function aiSearch(q){
   return null;
 }
 
+/* ============================================================
+   PICTURE ROUND — camera photo → vision model
+   ============================================================ */
+function downscale(file,max,q){ return new Promise((res)=>{
+  try{ const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{ let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+      const s=Math.min(1, max/Math.max(w,h)); w=Math.max(1,Math.round(w*s)); h=Math.max(1,Math.round(h*s));
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+      try{ res(c.toDataURL('image/jpeg',q)); }catch(e){ res(null); } };
+    img.onerror=()=>{ URL.revokeObjectURL(url); res(null); };
+    img.src=url;
+  }catch(e){ res(null); }
+});}
+const VISION_PROMPT="Identify the single main subject of this image for a quiz answer — it may be a person, place, landmark, flag, film scene, album cover, logo, artwork, animal or object. Reply with ONLY the name, 6 words or fewer. No explanation.";
+async function visionSearch(dataUrl){
+  const key=(cfg.apikey||"").trim(); if(!key||cfg.provider==="none") return {err:"Add an API key in PIN"};
+  try{
+    if(cfg.provider==="anthropic"){
+      const m=dataUrl.match(/^data:(image\/\w+);base64,(.*)$/); if(!m) return {err:"bad image"};
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
+        "Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-3-5-sonnet-latest",max_tokens:40,messages:[{role:"user",content:[
+          {type:"image",source:{type:"base64",media_type:m[1],data:m[2]}},{type:"text",text:VISION_PROMPT}]}]})});
+      const j=await r.json(); if(j.error) return {err:j.error.message}; return {ans:(j.content?.[0]?.text||"").trim()};
+    }
+    const openai = cfg.provider==="openai";
+    const url = openai ? "https://api.openai.com/v1/chat/completions" : "https://api.groq.com/openai/v1/chat/completions";
+    const models = openai ? ["gpt-4o-mini"] :
+      ["meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct","llama-3.2-90b-vision-preview","llama-3.2-11b-vision-preview"];
+    let lastErr="";
+    for(const model of models){
+      const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+        body:JSON.stringify({model,temperature:0,max_tokens:40,messages:[{role:"user",content:[
+          {type:"text",text:VISION_PROMPT},{type:"image_url",image_url:{url:dataUrl}}]}]})});
+      const j=await r.json();
+      if(j.error){ lastErr=j.error.message||"error"; if(/model|decommission|not found|does not exist|unsupported/i.test(lastErr)) continue; return {err:lastErr}; }
+      return {ans:(j.choices?.[0]?.message?.content||"").trim()};
+    }
+    return {err:lastErr||"no vision model available"};
+  }catch(e){ return {err:e.message}; }
+}
+async function handleImage(file){
+  connect.classList.add('think'); banner.textContent="📷 …"; banner.style.fontSize="30px";
+  const dataUrl=await downscale(file,900,0.72);
+  if(!dataUrl){ connect.classList.remove('think'); banner.textContent="Couldn't read photo"; banner.style.fontSize="18px"; return; }
+  const out=await visionSearch(dataUrl);
+  connect.classList.remove('think');
+  if(out.ans){ lastAnswer=out.ans; if(cfg.showAnswer){ banner.textContent=out.ans; fitBanner(out.ans); } else { bannerRest(); } speak(out.ans); }
+  else { banner.textContent=out.err||"NO MATCH"; banner.style.fontSize="15px"; }
+}
+
 /* ---- config (this device only) ---- */
 const cfg = {provider:"groq", apikey:"", voice:true, rate:1.35, showAnswer:true, decoy:"FRENCH FRIES", kbFirst:true};
 const DECOYS = ["FRENCH FRIES","POP MUSIC","THE MOVIES","SPORT","GENERAL KNOWLEDGE","THE 1970s","GEOGRAPHY","SCIENCE","HISTORY","FOOD & DRINK","TV & FILM","MUSIC","NATURE","ART"];
@@ -465,6 +524,8 @@ document.querySelector('.logo').addEventListener('click',()=>{   // tap the logo
   renderCfg(); try{localStorage.setItem('gcc',JSON.stringify(cfg));}catch(e){}
 });
 pin.addEventListener('click',()=>{ primeTTS(); sheet.classList.add('open'); });
+$("camBtn").addEventListener('click',()=>{ ttsPrimed=true; $("camInput").click(); });   // picture round
+$("camInput").addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) handleImage(f); });
 sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('open'); });
 $("save").addEventListener('click',()=>{ saveCfg(); renderCfg(); sheet.classList.remove('open'); });
 $("tgVoice").addEventListener('click',()=>{ cfg.voice=!cfg.voice; saveCfg(); renderCfg(); });
