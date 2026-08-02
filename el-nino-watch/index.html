@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="El Niño Watch — live ENSO state and on-the-ground weather impact for Dubai, Bali, Thailand, Beirut and Istanbul.">
+<title>El Niño Watch</title>
+<style>
+  :root{
+    --bg:#0c0d0f;
+    --panel:#161719;
+    --panel-2:#1d1f22;
+    --panel-3:#25272b;
+    --line:#2c2f34;
+    --txt:#f2f3f5;
+    --txt-2:#a4a9b3;
+    --txt-3:#6e747f;
+    --accent:#4c9bff;
+    --accent-soft:rgba(76,155,255,.14);
+    --warm:#ff8a4c;
+    --hot:#ff5d5d;
+    --cool:#56b8ff;
+    --cold:#7a8cff;
+    --good:#3ddc97;
+    --warn:#ffc44d;
+    --r:18px;
+    --r-sm:12px;
+    --shadow:0 10px 34px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45;}
+  body{padding:0 0 40px;}
+  a{color:var(--accent);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+  input{font:inherit;}
+  ::selection{background:var(--accent-soft);}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px;}
+
+  .wrap{max-width:1640px;margin:0 auto;padding:16px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;}
+  .card.pad-0{padding:0;}
+  .h{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--txt-2);}
+  .muted{color:var(--txt-2);}
+  .dim{color:var(--txt-3);}
+  .xs{font-size:12px;}
+  .sm{font-size:13px;}
+  .row{display:flex;align-items:center;gap:10px;}
+  .row.wrap-w{flex-wrap:wrap;}
+  .grow{flex:1;}
+  .sec-title{display:flex;align-items:baseline;gap:12px;margin:22px 2px 12px;}
+  .sec-title h2{font-size:19px;font-weight:650;letter-spacing:-.01em;}
+  .sec-title .note{font-size:12.5px;color:var(--txt-3);}
+
+  /* ---------- top bar ---------- */
+  .topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;}
+  .brand{display:flex;align-items:center;gap:10px;padding-right:4px;}
+  .brand .mark{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;
+    background:linear-gradient(145deg,#ff8a4c,#ff5d5d);color:#1a0d06;font-weight:800;font-size:15px;flex:none;}
+  .brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;display:block;line-height:1.1;}
+  .brand span{font-size:11.5px;color:var(--txt-3);display:block;}
+  .search{position:relative;flex:1;min-width:220px;max-width:520px;}
+  .search input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;
+    color:var(--txt);padding:11px 14px 11px 40px;font-size:14px;}
+  .search input::placeholder{color:var(--txt-3);}
+  .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--txt-3);}
+  .results{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:40;background:var(--panel-2);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);max-height:340px;overflow-y:auto;}
+  .results button{display:block;width:100%;text-align:left;padding:10px 14px;font-size:14px;}
+  .results button:hover,.results button:focus{background:var(--panel-3);}
+  .results .r2{font-size:12px;color:var(--txt-3);}
+  .btn{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-size:13px;
+    font-weight:600;color:var(--txt-2);display:inline-flex;align-items:center;gap:7px;transition:.15s;}
+  .btn:hover{background:var(--panel-3);color:var(--txt);}
+  .btn.on{background:#fff;color:#111;border-color:#fff;}
+  .seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px;}
+  .seg button{padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:650;color:var(--txt-3);}
+  .seg button.on{background:#fff;color:#111;}
+  .stamp{font-size:12px;color:var(--txt-3);white-space:nowrap;}
+  .stamp b{color:var(--txt-2);font-weight:600;}
+
+  /* ---------- alerts ---------- */
+  .alerts{display:flex;gap:10px;overflow-x:auto;padding:14px 2px 2px;scrollbar-width:thin;}
+  .alert{flex:none;max-width:340px;display:flex;gap:10px;align-items:flex-start;padding:11px 14px;
+    border-radius:14px;border:1px solid var(--line);background:var(--panel);}
+  .alert .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none;}
+  .alert b{font-size:13px;font-weight:650;display:block;}
+  .alert span{font-size:12px;color:var(--txt-2);display:block;line-height:1.35;}
+  .alert.sev-3{border-color:rgba(255,93,93,.42);background:linear-gradient(180deg,rgba(255,93,93,.10),transparent);}
+  .alert.sev-2{border-color:rgba(255,196,77,.36);}
+  .sev-3 .dot{background:var(--hot);} .sev-2 .dot{background:var(--warn);} .sev-1 .dot{background:var(--accent);}
+
+  /* ---------- ENSO band ---------- */
+  .enso{display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr) minmax(240px,300px);gap:14px;}
+  .phase-card{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px;}
+  .phase-card::after{content:"";position:absolute;inset:auto -30% -60% auto;width:230px;height:230px;border-radius:50%;
+    background:var(--phase-glow,rgba(76,155,255,.18));filter:blur(46px);pointer-events:none;}
+  .phase-name{font-size:30px;font-weight:750;letter-spacing:-.02em;line-height:1.1;}
+  .phase-strength{font-size:13px;font-weight:600;color:var(--txt-2);}
+  .anom-val{font-size:52px;font-weight:750;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums;}
+  .anom-unit{font-size:15px;font-weight:600;color:var(--txt-2);margin-left:6px;}
+  .kv{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:5px 0;border-top:1px solid var(--line);}
+  .kv span{color:var(--txt-3);} .kv b{font-weight:600;font-variant-numeric:tabular-nums;}
+  .scale{position:relative;height:10px;border-radius:999px;margin:6px 0 4px;
+    background:linear-gradient(90deg,#7a8cff,#56b8ff,#2c2f34 42%,#2c2f34 58%,#ff8a4c,#ff5d5d);}
+  .scale i{position:absolute;top:-4px;width:4px;height:18px;border-radius:3px;background:#fff;
+    box-shadow:0 0 0 3px var(--panel);transition:left .5s cubic-bezier(.2,.8,.2,1);}
+  .scale-lbl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--txt-3);}
+  .chart-card{display:flex;flex-direction:column;}
+  .chart-wrap{flex:1;min-height:190px;max-height:300px;position:relative;}
+  .chart-wrap svg{display:block;width:100%;height:100%;}
+  .tile svg{width:30px;height:30px;flex:none;}
+  .sens-list{display:flex;flex-direction:column;gap:9px;}
+  .sens{display:flex;align-items:center;gap:10px;}
+  .sens .nm{font-size:13px;font-weight:600;}
+  .sens .bar{width:74px;height:6px;border-radius:999px;background:var(--panel-3);overflow:hidden;flex:none;}
+  .sens .bar i{display:block;height:100%;border-radius:999px;}
+  .sens .lv{font-size:11px;color:var(--txt-3);width:52px;text-align:right;flex:none;}
+
+  /* ---------- spotlight ---------- */
+  .spots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;}
+  .spot{position:relative;text-align:left;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);padding:14px;transition:.18s;overflow:hidden;}
+  .spot:hover{border-color:#3c4149;transform:translateY(-2px);}
+  .spot.on{background:#f3f4f6;color:#15171a;border-color:#f3f4f6;}
+  .spot.on .muted,.spot.on .dim,.spot.on .spot-sub{color:#5b6069;}
+  .spot-nm{font-size:15px;font-weight:700;letter-spacing:-.01em;}
+  .spot-sub{font-size:11.5px;color:var(--txt-3);}
+  .spot-temp{font-size:34px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}
+  .spot-ico{width:46px;height:46px;flex:none;}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+    font-size:11.5px;font-weight:650;background:var(--panel-3);color:var(--txt-2);white-space:nowrap;}
+  .spot.on .chip{background:rgba(0,0,0,.07);color:#3c4149;}
+  .chip.hot{background:rgba(255,93,93,.16);color:#ff8f8f;}
+  .chip.warm{background:rgba(255,138,76,.16);color:#ffab7d;}
+  .chip.cool{background:rgba(86,184,255,.16);color:#8ed0ff;}
+  .chip.dry{background:rgba(255,196,77,.15);color:#ffd682;}
+  .chip.wet{background:rgba(76,155,255,.16);color:#94c3ff;}
+  .spark{display:flex;align-items:flex-end;gap:2px;height:26px;margin-top:6px;
+    border-bottom:1px solid var(--line);padding-bottom:1px;}
+  .spot.on .spark{border-color:rgba(0,0,0,.12);}
+  .spark i{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:3px;opacity:.85;}
+  .spot.on .spark i{background:#2f7fe0;}
+
+  /* ---------- detail ---------- */
+  .main{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,352px);gap:14px;align-items:start;}
+  .now{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;}
+  .now-temp{font-size:74px;font-weight:750;letter-spacing:-.04em;line-height:.95;font-variant-numeric:tabular-nums;}
+  .now-ico{width:84px;height:84px;flex:none;}
+  .now-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:10px 18px;flex:1;min-width:260px;}
+  .now-grid div span{display:block;font-size:11.5px;color:var(--txt-3);}
+  .now-grid div b{font-size:14px;font-weight:650;font-variant-numeric:tabular-nums;}
+  .days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:4px;}
+  .day{background:var(--panel-2);border:1px solid var(--line);border-radius:15px;padding:11px 8px;text-align:center;
+    display:flex;flex-direction:column;align-items:center;gap:5px;transition:.15s;}
+  .day:hover{border-color:#3c4149;}
+  .day.on{background:#f3f4f6;color:#15171a;border-color:#f3f4f6;}
+  .day .dw{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--txt-2);}
+  .day.on .dw{color:#5b6069;}
+  .day .di{width:38px;height:38px;}
+  .day .dt{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .day .dn{font-size:12px;color:var(--txt-3);font-variant-numeric:tabular-nums;}
+  .day.on .dn{color:#6b7079;}
+  .day .dp{font-size:11px;color:var(--accent);font-weight:650;}
+  .day.on .dp{color:#2f7fe0;}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:132px;
+    display:flex;flex-direction:column;gap:8px;}
+  .tile .tv{font-size:26px;font-weight:730;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .tile .tv small{font-size:13px;font-weight:600;color:var(--txt-2);margin-left:3px;}
+  .tile .tn{font-size:11.5px;color:var(--txt-3);line-height:1.35;}
+  .meter{height:6px;border-radius:999px;background:var(--panel-3);overflow:hidden;}
+  .meter i{display:block;height:100%;border-radius:999px;background:var(--accent);}
+
+  /* ---------- lens ---------- */
+  .lens{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;}
+  .lens p{font-size:13.5px;color:var(--txt-2);line-height:1.6;}
+  .lens ul{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:10px;}
+  .lens li{display:flex;gap:9px;font-size:13px;color:var(--txt-2);line-height:1.5;}
+  .lens li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:8px;flex:none;}
+  .conf{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:650;padding:3px 9px;border-radius:999px;}
+  .conf-high{background:rgba(61,220,151,.15);color:#6ee7b4;}
+  .conf-moderate{background:rgba(255,196,77,.15);color:#ffd682;}
+  .conf-low{background:rgba(164,169,179,.15);color:var(--txt-2);}
+
+  /* ---------- rail ---------- */
+  .rail{display:flex;flex-direction:column;gap:14px;}
+  .city{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;background:var(--panel-2);
+    border:1px solid transparent;transition:.15s;text-align:left;width:100%;}
+  .city:hover{border-color:var(--line);}
+  .city.on{border-color:var(--accent);}
+  .city .ci{width:36px;height:36px;flex:none;}
+  .city .cn{font-size:14px;font-weight:650;letter-spacing:-.01em;}
+  .city .cc{font-size:11px;color:var(--txt-3);}
+  .city .ct{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .city-x{opacity:0;color:var(--txt-3);font-size:16px;padding:2px 4px;flex:none;line-height:1;}
+  .city:hover .city-x{opacity:1;}
+  .city-x:hover{color:var(--hot);}
+
+  /* ---------- misc ---------- */
+  .empty{padding:26px 12px;text-align:center;color:var(--txt-3);font-size:13px;}
+  .skel{background:linear-gradient(90deg,var(--panel-2),var(--panel-3),var(--panel-2));
+    background-size:200% 100%;animation:sh 1.3s linear infinite;border-radius:8px;color:transparent!important;}
+  @keyframes sh{to{background-position:-200% 0;}}
+  .banner{display:none;align-items:center;gap:10px;padding:11px 14px;border-radius:14px;font-size:13px;
+    border:1px solid rgba(255,93,93,.4);background:rgba(255,93,93,.08);color:#ffb3b3;margin-top:12px;}
+  .banner.show{display:flex;}
+  dialog{border:1px solid var(--line);background:var(--panel);color:var(--txt);border-radius:var(--r);
+    padding:22px;max-width:640px;width:calc(100% - 32px);box-shadow:var(--shadow);}
+  dialog::backdrop{background:rgba(0,0,0,.66);backdrop-filter:blur(3px);}
+  dialog h3{font-size:17px;margin-bottom:12px;}
+  dialog h4{font-size:13px;margin:16px 0 6px;color:var(--txt);}
+  dialog p,dialog li{font-size:13px;color:var(--txt-2);line-height:1.6;}
+  dialog ul{padding-left:18px;display:flex;flex-direction:column;gap:5px;}
+  .fld{display:block;margin-top:12px;}
+  .fld span{display:block;font-size:11.5px;color:var(--txt-3);margin-bottom:5px;}
+  .fld input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;
+    color:var(--txt);padding:10px 12px;font-size:14px;}
+
+  @media(max-width:1400px){
+    .enso{grid-template-columns:minmax(260px,320px) minmax(0,1fr);}
+    .enso .sens-card{grid-column:1/-1;}
+    .sens-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 22px;}
+  }
+  @media(max-width:1180px){
+    .spots{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .main{grid-template-columns:minmax(0,1fr);}
+    .lens{grid-template-columns:minmax(0,1fr);}
+  }
+  @media(max-width:820px){
+    .enso{grid-template-columns:minmax(0,1fr);}
+    .spots{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .now-temp{font-size:60px;}
+    /* a swipeable strip reads better than an orphaned grid row */
+    .days{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;}
+    .day{min-width:88px;flex:none;scroll-snap-align:start;}
+  }
+  @media(max-width:560px){
+    .wrap{padding:10px;}
+    .spots{grid-template-columns:minmax(0,1fr);}
+    .anom-val{font-size:44px;}
+    .topbar{gap:8px;}
+    .search{order:5;min-width:100%;}
+  }
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ══ top bar ══ -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">EN</div>
+      <div><b>El Niño Watch</b><span id="phasePill">loading ENSO state…</span></div>
+    </div>
+
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search any city to add it to the watch list…"
+             autocomplete="off" aria-label="Search for a city">
+      <div class="results" id="results" hidden></div>
+    </div>
+
+    <div class="seg" role="group" aria-label="Temperature units">
+      <button data-unit="c" class="on">°C</button><button data-unit="f">°F</button>
+    </div>
+    <button class="btn" id="refresh" title="Refresh all live data">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      Refresh
+    </button>
+    <button class="btn" id="about" title="Data sources and method">Method</button>
+    <div class="stamp" id="stamp">—</div>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <!-- ══ live watch items ══ -->
+  <div class="alerts" id="alerts"></div>
+
+  <!-- ══ ENSO state ══ -->
+  <div class="sec-title">
+    <h2>ENSO state</h2>
+    <span class="note">Equatorial Pacific — the driver behind everything below</span>
+  </div>
+
+  <div class="enso">
+    <section class="card phase-card" id="phaseCard" aria-live="polite">
+      <div>
+        <div class="h">Current phase</div>
+        <div class="phase-name" id="phaseName">Loading…</div>
+        <div class="phase-strength" id="phaseStrength">Sampling the Niño 3.4 box</div>
+      </div>
+      <div>
+        <div class="row" style="align-items:baseline">
+          <div class="anom-val" id="anomVal">–</div><div class="anom-unit">°C anomaly</div>
+        </div>
+        <div class="scale"><i id="scaleMark" style="left:50%"></i></div>
+        <div class="scale-lbl"><span>−3 La Niña</span><span>0</span><span>El Niño +3</span></div>
+      </div>
+      <div>
+        <div class="kv"><span id="sstLabel">Niño 3.4 SST now</span><b id="sstNow">–</b></div>
+        <div class="kv"><span>90-day mean anomaly</span><b id="anom90">–</b></div>
+        <div class="kv"><span>30-day trend</span><b id="anomTrend">–</b></div>
+        <div class="kv"><span>Official CPC ONI</span><b id="oniOfficial">not set</b></div>
+      </div>
+      <div class="xs dim" style="line-height:1.45">
+        Indicative estimate from live model SST vs the 1991–2020 climatology — not the official ONI.
+        <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php" target="_blank" rel="noopener">Check CPC</a> ·
+        <button id="setOni" class="xs" style="color:var(--accent);text-decoration:underline">pin the official value</button>
+      </div>
+    </section>
+
+    <section class="card chart-card">
+      <div class="row">
+        <div class="grow"><div class="h">Niño 3.4 anomaly trend</div>
+          <div class="xs dim" id="trendRange">last 60 days</div></div>
+        <div class="chip" id="trendChip">–</div>
+      </div>
+      <div class="chart-wrap" id="ensoChart"></div>
+    </section>
+
+    <section class="card sens-card">
+      <div class="h">ENSO sensitivity</div>
+      <div class="xs dim" style="margin:2px 0 12px">How strongly this phase usually shows up locally</div>
+      <div class="sens-list" id="sensList"></div>
+    </section>
+  </div>
+
+  <!-- ══ spotlight ══ -->
+  <div class="sec-title">
+    <h2>Spotlight locations</h2>
+    <span class="note">Anomaly = today vs the local 2010–2024 normal for this date</span>
+  </div>
+  <div class="spots" id="spots"></div>
+
+  <!-- ══ detail ══ -->
+  <div class="sec-title">
+    <h2 id="detailTitle">Location detail</h2>
+    <span class="note" id="detailNote"></span>
+  </div>
+
+  <div class="main">
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <section class="card" id="nowCard"></section>
+      <section class="card" id="daysCard"></section>
+      <div class="tiles" id="tiles"></div>
+      <section class="card" id="anomCard"></section>
+      <section class="card" id="lensCard"></section>
+      <section class="card" id="areaCard"></section>
+    </div>
+
+    <aside class="rail">
+      <section class="card">
+        <div class="row"><div class="grow"><div class="h">Chance of rain</div>
+          <div class="xs dim" id="rainNote">next 24 hours</div></div></div>
+        <div class="chart-wrap" style="height:160px;min-height:160px" id="rainChart"></div>
+      </section>
+      <section class="card">
+        <div class="row" style="margin-bottom:10px">
+          <div class="h grow">Spotlight</div>
+        </div>
+        <div id="railSpots" style="display:flex;flex-direction:column;gap:7px"></div>
+      </section>
+      <section class="card">
+        <div class="row" style="margin-bottom:10px">
+          <div class="h grow">Watch list</div>
+          <button class="xs dim" id="resetWatch" style="text-decoration:underline">reset</button>
+        </div>
+        <div id="railWatch" style="display:flex;flex-direction:column;gap:7px"></div>
+        <div class="xs dim" style="margin-top:10px">Search above to add anywhere in the world.</div>
+      </section>
+    </aside>
+  </div>
+
+  <p class="xs dim" style="margin:26px 2px 0;line-height:1.6">
+    Weather and climate data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+    (forecast, marine and ERA5 archive APIs). ENSO teleconnection notes are climatological tendencies with the
+    stated confidence — they are not forecasts. Always pair the low-confidence regions with the local
+    national met service before acting.
+  </p>
+</div>
+
+<dialog id="aboutDlg">
+  <h3>How this dashboard works</h3>
+  <p>Everything refreshes from live sources each time you open the page (and every 15 minutes while it's open).
+     Nothing is stored on a server — the watch list and cached climatology live in your browser.</p>
+  <h4>ENSO state</h4>
+  <p>Six points across the Niño 3.4 box (5°N–5°S, 170°W–120°W) are sampled for sea-surface temperature from
+     Open-Meteo's marine model. The average is compared to the standard 1991–2020 monthly climatology for that
+     box to give an anomaly, and a 90-day mean approximates the ONI's 3-month smoothing.
+     This is an <b>indicative estimate</b>: the model SST carries its own bias, so it can differ from NOAA CPC's
+     official ONI by a few tenths. Pin the official value from CPC when it updates (monthly) and it will be
+     shown alongside — the phase label then follows the pinned value.</p>
+  <h4>Local anomalies</h4>
+  <p>For each location the daily normal is built from the ERA5 archive over 2010–2024, smoothed over a ±7-day
+     window around each calendar day. "+3.1° vs normal" means today's mean temperature is 3.1 °C above that
+     15-year normal for this date. Rainfall is compared the same way, as a percentage of the normal 7-day total.</p>
+  <h4>El Niño lens</h4>
+  <p>The regional notes describe how each area <i>typically</i> behaves in the current ENSO phase, drawn from
+     established teleconnection research, with an explicit confidence level. Indonesia and Thailand have strong,
+     well-documented ENSO signals. The Gulf is moderate. Lebanon and Türkiye are weak — the North Atlantic
+     Oscillation and Mediterranean storm track usually matter more there, and the notes say so.</p>
+  <h4>Watch items</h4>
+  <p>The strip at the top is computed live from the forecast: extreme heat, heavy rain, damaging gusts, large
+     temperature anomalies and unusually dry or wet weeks across every location being tracked.</p>
+  <div class="row" style="margin-top:18px;justify-content:flex-end"><button class="btn" id="aboutClose">Close</button></div>
+</dialog>
+
+<dialog id="oniDlg">
+  <h3>Pin the official ONI</h3>
+  <p>NOAA CPC publishes the Oceanic Niño Index monthly. Enter the latest value here and the dashboard will
+     show it as the authoritative number and label the phase from it.
+     <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php" target="_blank" rel="noopener">Open the CPC table</a>.</p>
+  <label class="fld"><span>Latest ONI value (°C, e.g. -0.4)</span>
+    <input id="oniInput" type="number" step="0.1" min="-4" max="4" placeholder="-0.4"></label>
+  <label class="fld"><span>Season label (e.g. AMJ 2026)</span>
+    <input id="oniSeason" type="text" placeholder="AMJ 2026"></label>
+  <div class="row" style="margin-top:18px;justify-content:flex-end">
+    <button class="btn" id="oniClear">Clear</button>
+    <button class="btn on" id="oniSave">Save</button>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════════
+   El Niño Watch — single-file dashboard.
+   Data: Open-Meteo forecast / marine / archive APIs (no key, CORS-open).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ─────────── config ─────────── */
+
+const SPOTLIGHTS = [
+  { id:'dubai', name:'Dubai', country:'United Arab Emirates', lat:25.2048, lon:55.2708, region:'gulf',
+    area:[ {name:'Abu Dhabi',lat:24.4539,lon:54.3773},
+           {name:'Sharjah',lat:25.3463,lon:55.4209},
+           {name:'Al Ain',lat:24.2075,lon:55.7447},
+           {name:'Ras Al Khaimah',lat:25.7895,lon:55.9432} ] },
+  { id:'bali', name:'Bali', country:'Indonesia', label:'Denpasar', lat:-8.6500, lon:115.2167, region:'indonesia',
+    area:[ {name:'Jakarta',lat:-6.2088,lon:106.8456},
+           {name:'Surabaya',lat:-7.2575,lon:112.7521},
+           {name:'Lombok',lat:-8.5833,lon:116.1167},
+           {name:'Ubud',lat:-8.5069,lon:115.2625} ] },
+  { id:'thailand', name:'Bangkok', country:'Thailand', lat:13.7563, lon:100.5018, region:'thailand',
+    area:[ {name:'Chiang Mai',lat:18.7883,lon:98.9853},
+           {name:'Phuket',lat:7.8804,lon:98.3923},
+           {name:'Khon Kaen',lat:16.4419,lon:102.8360},
+           {name:'Pattaya',lat:12.9236,lon:100.8825} ] },
+  { id:'beirut', name:'Beirut', country:'Lebanon', lat:33.8938, lon:35.5018, region:'levant',
+    area:[ {name:'Tripoli',lat:34.4367,lon:35.8497},
+           {name:'Zahlé (Bekaa)',lat:33.8463,lon:35.9019},
+           {name:'Tyre',lat:33.2705,lon:35.2038} ] },
+  { id:'istanbul', name:'Istanbul', country:'Türkiye', lat:41.0082, lon:28.9784, region:'turkey',
+    area:[ {name:'Ankara',lat:39.9334,lon:32.8597},
+           {name:'İzmir',lat:38.4237,lon:27.1428},
+           {name:'Antalya',lat:36.8969,lon:30.7133},
+           {name:'Trabzon',lat:41.0027,lon:39.7168} ] },
+];
+
+/* Global ENSO-sensitive reference points, seeded into the watch list. */
+const DEFAULT_WATCH = [
+  { id:'w-singapore', name:'Singapore',   country:'Singapore',  lat:1.3521,   lon:103.8198 },
+  { id:'w-sydney',    name:'Sydney',      country:'Australia',  lat:-33.8688, lon:151.2093 },
+  { id:'w-lima',      name:'Lima',        country:'Peru',       lat:-12.0464, lon:-77.0428 },
+  { id:'w-nairobi',   name:'Nairobi',     country:'Kenya',      lat:-1.2864,  lon:36.8172  },
+  { id:'w-la',        name:'Los Angeles', country:'USA',        lat:34.0522,  lon:-118.2437},
+  { id:'w-mumbai',    name:'Mumbai',      country:'India',      lat:19.0760,  lon:72.8777  },
+];
+
+/* Niño 3.4 sampling points (5°N–5°S, 170°W–120°W). */
+const NINO34 = [
+  {lat: 0,lon:-170},{lat: 0,lon:-155},{lat: 0,lon:-140},
+  {lat: 0,lon:-125},{lat: 3.5,lon:-150},{lat:-3.5,lon:-145},
+];
+/* Niño 3.4 monthly mean SST, 1991–2020 base period (°C). */
+const NINO34_CLIM = [26.72,26.86,27.34,27.79,27.87,27.55,27.11,26.72,26.63,26.66,26.72,26.72];
+
+/* ENSO teleconnection knowledge base — tendencies, not forecasts. */
+const LENS = {
+  gulf:{
+    title:'Arabian Gulf / UAE', sensitivity:3,
+    elnino:{ conf:'moderate',
+      text:'El Niño strengthens the subtropical jet across Arabia, steering more Mediterranean and Arabian Sea troughs over the Gulf. Winter and spring (Nov–Apr) skew wetter than normal, with a higher chance of short, intense rain bursts rather than steady rainfall. Summer heat runs near or slightly above normal, and Gulf sea temperatures stay high, which keeps humidity punishing.',
+      pts:['Convective rain events overwhelm drainage quickly — expect road, airport and last-mile delivery disruption on the heaviest days.',
+           'Sand and dust storms are typically less frequent than in La Niña winters.',
+           'Plan outdoor works and site logistics around the Nov–Apr rain windows, not around monthly averages.'] },
+    lanina:{ conf:'moderate',
+      text:'La Niña winters over the Gulf tend to be drier than normal with a more persistent Arabian anticyclone. Rain events are fewer and lighter, dust and haze episodes more common, and the extreme-heat season often starts earlier in spring.',
+      pts:['Water and landscaping demand runs above plan through a dry winter.',
+           'More dust days: filtration, solar-panel soiling and visibility-driven flight delays all worsen.',
+           'Watch for an early April–May heat onset rather than the usual June ramp.'] },
+    neutral:{ conf:'low',
+      text:'With ENSO near neutral, the Gulf is driven by its own machinery — the Arabian anticyclone, passing Mediterranean troughs and very warm Gulf sea temperatures. ENSO gives you almost no steer here; the 7-day synoptic forecast is what matters.',
+      pts:['Treat rain as a synoptic-scale event to be tracked days ahead, not a seasonal expectation.',
+           'Humidity and heat index remain the dominant operational constraint from June to September.'] },
+    watch:['Flash-flood disruption, Nov–Apr','Heat index above 45 °C, Jun–Sep','Dust and visibility events'] },
+
+  indonesia:{
+    title:'Indonesia / Bali', sensitivity:5,
+    elnino:{ conf:'high',
+      text:'This is the strongest and best-documented ENSO signal on the dashboard. El Niño shifts the Walker circulation east, suppressing convection over the Maritime Continent. The monsoon onset is typically delayed by two to six weeks, Oct–Feb rainfall runs well below normal, and days run warmer. Drought stress, reservoir and groundwater drawdown, and elevated fire and haze risk in Sumatra and Kalimantan all follow.',
+      pts:['Expect a late, weak wet season — water supply, agriculture and hydropower planning should assume a shortfall.',
+           'Peat and forest fire risk rises sharply; regional haze can close airports and hit air quality far downwind of the fires.',
+           'Bali specifically: drier, sunnier conditions favour tourism but strain island water supply late in the dry season.',
+           'Rice planting calendars slip; food-price pressure typically follows a strong event by one to two quarters.'] },
+    lanina:{ conf:'high',
+      text:'La Niña does the reverse and is equally reliable: enhanced convection over the Maritime Continent, an earlier and wetter monsoon, and above-normal rainfall through the wet season. Flooding and landslides are the operative risks, and sea levels around the archipelago run slightly higher.',
+      pts:['Flood and landslide exposure rises across Java, Sumatra and Bali\'s interior — check drainage and site access.',
+           'Wet-season disruption starts earlier than the calendar suggests; build float into Q4 schedules.',
+           'Fire and haze risk drops to near zero; air quality is usually good.'] },
+    neutral:{ conf:'moderate',
+      text:'Near-neutral ENSO leaves the Madden–Julian Oscillation and the Indian Ocean Dipole in charge of week-to-week rainfall. The monsoon should run close to its normal calendar, but 30–60 day MJO pulses still deliver very wet and very dry fortnights in turn.',
+      pts:['Track the MJO for intraseasonal swings — it drives most of the variance in a neutral year.',
+           'A negative Indian Ocean Dipole can still deliver a wet year regardless of ENSO.'] },
+    watch:['Monsoon onset timing, Sep–Nov','Fire and haze, Jul–Oct','Flood and landslide, Dec–Feb'] },
+
+  thailand:{
+    title:'Thailand', sensitivity:5,
+    elnino:{ conf:'high',
+      text:'El Niño reliably makes Thailand hotter and drier. The southwest monsoon onset is delayed and weakened, May–Oct rainfall runs below normal, reservoir levels draw down through the following dry season, and March–May heat extremes intensify. Fewer tropical storms track into the country. Dry-season burning combines with stagnant air to worsen PM2.5 in the north.',
+      pts:['Irrigation and water allocation come under real stress — the second-year dry season after a strong event is usually the worst.',
+           'Sugar and rice yields typically fall; expect government limits on second-cropping.',
+           'Northern air quality (Chiang Mai, Feb–Apr) deteriorates markedly — plan travel and outdoor work accordingly.',
+           'Peak power demand rises with the heat while hydropower output falls.'] },
+    lanina:{ conf:'high',
+      text:'La Niña brings a wetter, earlier and stronger monsoon, above-normal rainfall and a higher chance of tropical storms tracking in from the South China Sea. Flooding — riverine in the Chao Phraya basin and flash flooding in the north and east — is the dominant risk.',
+      pts:['Flood exposure rises through Aug–Oct; check supply-chain and warehouse siting in the central plain.',
+           'Cooler, cloudier conditions ease power demand but disrupt outdoor work and construction schedules.',
+           'Northern air quality is usually better than in an El Niño year.'] },
+    neutral:{ conf:'moderate',
+      text:'In neutral conditions the monsoon should run close to its climatological calendar, with the MJO and individual tropical systems driving the wet and dry spells. Seasonal outlooks carry little skill; a fortnightly horizon is the honest one.',
+      pts:['Plan to the normal monsoon calendar and manage risk at the two-week horizon.',
+           'Dry-season haze in the north is still driven by burning practice regardless of ENSO.'] },
+    watch:['Monsoon onset, May–Jun','Reservoir levels through the dry season','Northern PM2.5, Feb–Apr'] },
+
+  levant:{
+    title:'Lebanon / Beirut', sensitivity:2,
+    elnino:{ conf:'low',
+      text:'The eastern Mediterranean has a weak and inconsistent ENSO signal. Some studies find a tendency toward a wetter early winter (Nov–Dec) in El Niño years, but the North Atlantic Oscillation and the Mediterranean storm track dominate, and individual years scatter widely. Treat ENSO here as a background nudge, not a steer.',
+      pts:['Do not plan water or agriculture on the ENSO signal alone — track the NAO and seasonal outlooks instead.',
+           'If a wet early winter does materialise, the risk is intense short-duration rain on dry, fire-scarred slopes: flash flooding and debris flows.',
+           'The dominant local trend remains long-run drying and repeated drought years, independent of phase.'] },
+    lanina:{ conf:'low',
+      text:'La Niña winters in the Levant have leaned drier in recent decades, and several of the region\'s severe drought years coincided with La Niña — but the sample is small and the physical link is weak. Confidence is genuinely low.',
+      pts:['Water storage and supply continuity deserve attention on a dry-winter assumption, but hedge it.',
+           'A dry winter extends the fire season into late autumn on the coastal range.'] },
+    neutral:{ conf:'low',
+      text:'ENSO is not a useful predictor for Lebanon in any phase, and least of all this one. Winter rainfall totals here hinge on how many Cyprus lows track through, which is an NAO and storm-track question.',
+      pts:['Use the 10-day forecast and national outlooks; ignore ENSO framing for local planning.',
+           'Interannual rainfall swings of ±40 % are normal here with no ENSO involvement at all.'] },
+    watch:['Winter rainfall totals, Dec–Mar','Snowpack on Mount Lebanon','Late-season heat and fire risk'] },
+
+  turkey:{
+    title:'Türkiye / Istanbul', sensitivity:2,
+    elnino:{ conf:'low',
+      text:'Türkiye sits at the far edge of the ENSO teleconnection. El Niño winters lean somewhat wetter than normal in the south and east, with milder cold extremes in the northwest, but the signal is weak and easily overwhelmed by blocking patterns and the North Atlantic Oscillation. Istanbul\'s winter is far more sensitive to whether cold Balkan or Black Sea air arrives than to the Pacific.',
+      pts:['Useful as background context only — the operative forecast horizon here is 5–10 days.',
+           'A wetter tendency mainly helps reservoir recovery in the south; Istanbul\'s supply follows Thrace rainfall.',
+           'Milder cold extremes slightly reduce, but do not remove, the risk of a disruptive lake-effect snow event.'] },
+    lanina:{ conf:'low',
+      text:'La Niña winters lean drier across Türkiye, with a somewhat higher chance of cold-air outbreaks and Black Sea lake-effect snow around Istanbul. Recent drought years in central Anatolia have clustered in La Niña winters, though the causal link is weak.',
+      pts:['Assume drier reservoirs into spring; central Anatolian agriculture is the exposed piece.',
+           'Higher chance of a disruptive snow event closing Istanbul roads and airports for a day or two.',
+           'Keep the cold-snap contingency alive through February.'] },
+    neutral:{ conf:'low',
+      text:'With ENSO neutral, Türkiye\'s weather is a pure North Atlantic and Mediterranean story. Neither wet nor dry should be assumed; the year-to-year spread is large and unrelated to the Pacific.',
+      pts:['Plan on climatology and track the medium-range forecast.',
+           'Istanbul\'s main weather risks — snow disruption, heavy autumn rain, summer heat — are all independent of ENSO.'] },
+    watch:['Reservoir levels, Istanbul and Anatolia','Winter snow disruption','Summer heatwaves, Jul–Aug'] },
+
+  generic:{
+    title:'Global watch point', sensitivity:3,
+    elnino:{ conf:'low',
+      text:'This location is on the watch list rather than the spotlight, so no curated regional teleconnection is applied. The live conditions, the anomaly against its own 2010–2024 normal and the watch items above are all still computed from real data.',
+      pts:['Use the anomaly numbers rather than an assumed ENSO tendency here.'] },
+    lanina:{ conf:'low', text:'This location is on the watch list rather than the spotlight, so no curated regional teleconnection is applied. The live conditions and local anomaly are still fully computed.', pts:['Use the anomaly numbers rather than an assumed ENSO tendency here.'] },
+    neutral:{ conf:'low', text:'This location is on the watch list rather than the spotlight, so no curated regional teleconnection is applied. The live conditions and local anomaly are still fully computed.', pts:['Use the anomaly numbers rather than an assumed ENSO tendency here.'] },
+    watch:[] },
+};
+
+/* ─────────── small helpers ─────────── */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const num = v => (typeof v === 'number' && isFinite(v));
+const fx  = (v, d = 0) => num(v) ? v.toFixed(d) : '–';
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const signed = (v, d = 1) => num(v) ? (v > 0 ? '+' : '') + v.toFixed(d) : '–';
+
+const store = {
+  get(k, maxAge) {
+    try {
+      const raw = localStorage.getItem('enw:' + k); if (!raw) return null;
+      const o = JSON.parse(raw);
+      if (maxAge && Date.now() - o.t > maxAge) return null;
+      return o.v;
+    } catch { return null; }
+  },
+  set(k, v) { try { localStorage.setItem('enw:' + k, JSON.stringify({ t: Date.now(), v })); } catch {} },
+  del(k)    { try { localStorage.removeItem('enw:' + k); } catch {} },
+};
+
+async function fetchJSON(url, { timeout = 25000, retries = 2 } = {}) {
+  let last;
+  for (let a = 0; a <= retries; a++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error('HTTP ' + res.status + (body ? ' — ' + body.slice(0, 140) : ''));
+      }
+      return await res.json();
+    } catch (e) {
+      clearTimeout(timer);
+      last = e;
+      if (a < retries) await sleep(600 * Math.pow(2, a));
+    }
+  }
+  throw last;
+}
+
+const iso = d => d.toISOString().slice(0, 10);
+const addDays = (d, n) => new Date(d.getTime() + n * 864e5);
+function doyOf(dateStr) {                       // 1..366, leap-safe
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  const start = Date.UTC(y, 0, 1);
+  return Math.round((Date.UTC(y, m - 1, d) - start) / 864e5) + 1;
+}
+
+/* WMO weather codes → label + icon key */
+function decode(code) {
+  const m = {
+    0:['Clear','sun'], 1:['Mainly clear','sun'], 2:['Partly cloudy','part'], 3:['Overcast','cloud'],
+    45:['Fog','fog'], 48:['Rime fog','fog'],
+    51:['Light drizzle','drizzle'], 53:['Drizzle','drizzle'], 55:['Heavy drizzle','drizzle'],
+    56:['Freezing drizzle','drizzle'], 57:['Freezing drizzle','drizzle'],
+    61:['Light rain','rain'], 63:['Rain','rain'], 65:['Heavy rain','rain'],
+    66:['Freezing rain','rain'], 67:['Freezing rain','rain'],
+    71:['Light snow','snow'], 73:['Snow','snow'], 75:['Heavy snow','snow'], 77:['Snow grains','snow'],
+    80:['Rain showers','showers'], 81:['Rain showers','showers'], 82:['Violent showers','showers'],
+    85:['Snow showers','snow'], 86:['Snow showers','snow'],
+    95:['Thunderstorm','storm'], 96:['Thunderstorm, hail','storm'], 99:['Thunderstorm, hail','storm'],
+  };
+  return m[code] || ['—', 'cloud'];
+}
+
+/* Inline SVG icon set — no external assets. Everything is drawn inside a 32×32 box. */
+function icon(code, isDay = 1, cls = '') {
+  const k = decode(code)[1];
+  const sunAt = (cx, cy, r, ray) =>
+    `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#ffc14d"/>` +
+    [0, 45, 90, 135, 180, 225, 270, 315].map(a =>
+      `<path d="M${cx} ${cy - r - 1.6}V${cy - r - 3.6 - ray}" stroke="#ffc14d" stroke-width="1.9"
+        stroke-linecap="round" transform="rotate(${a} ${cx} ${cy})"/>`).join('');
+  const moonAt = (cx, cy, r) =>
+    `<path d="M${cx + r * .95} ${cy + r * .5}A${r} ${r} 0 0 1 ${cx - r * .55} ${cy - r * .85}
+      A${r * 1.15} ${r * 1.15} 0 1 0 ${cx + r * .95} ${cy + r * .5}Z" fill="#cfd6e6"/>`;
+  const cloudAt = (dx, dy, s, f) => `<g transform="translate(${dx} ${dy}) scale(${s})" fill="${f}">
+      <circle cx="13" cy="17.4" r="6"/><circle cx="21" cy="19.4" r="4.7"/>
+      <rect x="8.6" y="18.6" width="14.8" height="5.6" rx="2.8"/></g>`;
+  const drops = (n, col) => Array.from({ length: n }, (_, i) =>
+    `<path d="M${11.5 + i * 4.6} 25.6v3.4" stroke="${col}" stroke-width="2"
+      stroke-linecap="round" opacity=".95"/>`).join('');
+  const flakes = n => Array.from({ length: n }, (_, i) =>
+    `<circle cx="${12 + i * 4.6}" cy="27.6" r="1.4" fill="#e3ebf6"/>`).join('');
+  const bolt = '<path d="M17.6 23.6 13.4 29.6h3l-1 3.2" stroke="#ffc14d" stroke-width="2"'
+    + ' fill="none" stroke-linejoin="round" stroke-linecap="round" clip-path="none"/>';
+  const lum = isDay ? sunAt(16, 15, 6.2, 1.4) : moonAt(16, 15, 6.6);
+  const small = isDay ? sunAt(11.5, 11.5, 4.4, 1.1) : moonAt(11.5, 11.5, 4.8);
+
+  const body = {
+    sun:     lum,
+    part:    small + cloudAt(2.5, 3, 1, '#c8d0dd'),
+    cloud:   cloudAt(-1.5, -1.5, .82, '#8f99a8') + cloudAt(2, 2, 1, '#cfd7e3'),
+    fog:     cloudAt(0, -1, 1, '#b9c1cd')
+             + '<path d="M6.5 26h19M9 30h14" stroke="#9aa5b4" stroke-width="2" stroke-linecap="round"/>',
+    drizzle: cloudAt(0, -.5, 1, '#c8d0dd') + drops(2, '#7cc0ff'),
+    rain:    cloudAt(0, -.5, 1, '#aeb8c6') + drops(3, '#5aa9f5'),
+    showers: small + cloudAt(2.5, 2.5, 1, '#c1cad8') + drops(2, '#5aa9f5'),
+    snow:    cloudAt(0, -.5, 1, '#c9d2df') + flakes(3),
+    storm:   cloudAt(0, -1.5, 1, '#98a3b2')
+             + '<path d="M18.4 22.4 13.6 29h3.4l-1.4 4 5.4-7.2h-3.4l1.4-3.4Z" fill="#ffc14d"/>',
+  }[k];
+  return `<svg class="${cls}" viewBox="0 0 32 34" role="img" aria-label="${esc(decode(code)[0])}">${body}</svg>`;
+}
+
+/* ─────────── state ─────────── */
+
+const state = {
+  unit: store.get('unit') || 'c',
+  selected: store.get('selected') || 'dubai',
+  watch: store.get('watch') || DEFAULT_WATCH.slice(),
+  oni: store.get('oni') || null,          // { value, season }
+  fc: {},                                 // key -> forecast payload
+  norm: {},                               // key -> { t:[], p:[], years }
+  enso: null,                             // { anom, anom90, trend, sst, series:[{d,a}] , source }
+  fetchedAt: null,
+  error: null,
+};
+
+const T = c => state.unit === 'f' ? c * 9 / 5 + 32 : c;      // absolute temperature
+const dT = c => state.unit === 'f' ? c * 9 / 5 : c;          // temperature difference
+const U = () => state.unit === 'f' ? '°F' : '°C';
+
+const keyOf = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
+
+/* Every point we ask the forecast API about, in one flat list. */
+function allPoints() {
+  const out = [];
+  for (const s of SPOTLIGHTS) {
+    out.push({ key: keyOf(s), lat: s.lat, lon: s.lon });
+    for (const a of s.area) out.push({ key: keyOf(a), lat: a.lat, lon: a.lon });
+  }
+  for (const w of state.watch) out.push({ key: keyOf(w), lat: w.lat, lon: w.lon });
+  const seen = new Set();
+  return out.filter(p => (seen.has(p.key) ? false : (seen.add(p.key), true)));
+}
+
+function locById(id) {
+  const s = SPOTLIGHTS.find(x => x.id === id);
+  if (s) return s;
+  const w = state.watch.find(x => x.id === id);
+  return w ? { ...w, region: 'generic', area: [] } : SPOTLIGHTS[0];
+}
+const fcOf = loc => state.fc[keyOf(loc)] || null;
+
+/* ─────────── API layer ─────────── */
+
+const FC_CUR = ['temperature_2m','relative_humidity_2m','apparent_temperature','is_day','precipitation',
+  'weather_code','cloud_cover','surface_pressure','wind_speed_10m','wind_direction_10m','wind_gusts_10m'].join(',');
+const FC_HOURLY = ['temperature_2m','precipitation_probability','precipitation','visibility','uv_index',
+  'wind_speed_10m','relative_humidity_2m'].join(',');
+const FC_DAILY = ['weather_code','temperature_2m_max','temperature_2m_min','sunrise','sunset','uv_index_max',
+  'precipitation_sum','precipitation_probability_max','wind_speed_10m_max'].join(',');
+
+async function loadForecasts() {
+  const pts = allPoints();
+  const url = 'https://api.open-meteo.com/v1/forecast'
+    + '?latitude='  + pts.map(p => p.lat).join(',')
+    + '&longitude=' + pts.map(p => p.lon).join(',')
+    + '&current=' + FC_CUR + '&hourly=' + FC_HOURLY + '&daily=' + FC_DAILY
+    + '&timezone=auto&forecast_days=7&wind_speed_unit=kmh';
+  const raw = await fetchJSON(url);
+  const arr = Array.isArray(raw) ? raw : [raw];
+  const map = {};
+  pts.forEach((p, i) => { if (arr[i]) map[p.key] = arr[i]; });
+  state.fc = map;
+  store.set('fc', map);
+}
+
+/* Niño 3.4 SST. Marine model first; the forecast model's 2 m temperature over open
+   ocean is a serviceable proxy if the marine endpoint or variable is unavailable. */
+async function loadEnso() {
+  const lat = NINO34.map(p => p.lat).join(','), lon = NINO34.map(p => p.lon).join(',');
+  let series = null, source = 'marine model SST';
+
+  for (const past of [60, 30, 7]) {
+    try {
+      const raw = await fetchJSON(
+        `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}`
+        + `&hourly=sea_surface_temperature&past_days=${past}&forecast_days=1&timezone=UTC`,
+        { retries: 1 });
+      series = dailyMean(raw, 'sea_surface_temperature');
+      if (series && series.length) break;
+      series = null;
+    } catch { /* try a shorter window, then the proxy */ }
+  }
+
+  /* The air-temperature fallback runs ~1 °C cooler than the sea surface it sits over,
+     so it can trend but it cannot be read against an SST climatology as an absolute
+     anomaly — doing that would manufacture a La Niña. Flagged, and the phase label
+     falls back to "needs calibration". */
+  const absolute = !!series;
+  if (!series) {
+    source = 'model 2 m air temperature (uncalibrated proxy)';
+    const raw = await fetchJSON(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+      + `&hourly=temperature_2m&past_days=60&forecast_days=1&timezone=UTC`, { retries: 1 });
+    series = dailyMean(raw, 'temperature_2m');
+  }
+  if (!series || !series.length) throw new Error('No Niño 3.4 data returned');
+
+  const withAnom = series.map(d => ({ d: d.d, sst: d.v, a: d.v - clim34(d.d) }));
+  const tail = n => withAnom.slice(-n).map(x => x.a);
+  const mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+
+  const anom   = mean(tail(7));
+  const anom90 = mean(tail(90));
+  const recent = mean(tail(15)), older = mean(withAnom.slice(-45, -30).map(x => x.a));
+  const trend  = num(recent) && num(older) ? recent - older : null;
+
+  state.enso = {
+    anom, anom90, trend, source, absolute,
+    sst: withAnom[withAnom.length - 1].sst,
+    days: withAnom.length,
+    series: withAnom,
+  };
+  store.set('enso', state.enso);
+}
+
+/* Average an hourly multi-point response into one daily series. */
+function dailyMean(raw, varName) {
+  const arr = Array.isArray(raw) ? raw : [raw];
+  const bucket = new Map();
+  for (const site of arr) {
+    const h = site && site.hourly;
+    if (!h || !h.time || !h[varName]) continue;
+    for (let i = 0; i < h.time.length; i++) {
+      const v = h[varName][i];
+      if (!num(v)) continue;
+      const day = h.time[i].slice(0, 10);
+      const b = bucket.get(day) || { s: 0, n: 0 };
+      b.s += v; b.n++; bucket.set(day, b);
+    }
+  }
+  return [...bucket.entries()].sort((a, b) => a[0] < b[0] ? -1 : 1)
+    .map(([d, b]) => ({ d, v: b.s / b.n }));
+}
+
+/* Niño 3.4 climatology, interpolated between month midpoints. */
+function clim34(dateStr) {
+  const dt = new Date(dateStr + 'T00:00:00Z');
+  const m = dt.getUTCMonth(), day = dt.getUTCDate();
+  const dim = new Date(Date.UTC(dt.getUTCFullYear(), m + 1, 0)).getUTCDate();
+  const frac = (day - 0.5) / dim;                      // 0 at month start, 1 at month end
+  const [i, j, t] = frac < 0.5
+    ? [(m + 11) % 12, m, frac + 0.5]
+    : [m, (m + 1) % 12, frac - 0.5];
+  return NINO34_CLIM[i] + (NINO34_CLIM[j] - NINO34_CLIM[i]) * t;
+}
+
+/* Daily normals from the ERA5 archive, 2010–2024, cached 60 days. */
+async function loadNormals(loc) {
+  const k = keyOf(loc);
+  if (state.norm[k]) return state.norm[k];
+  const cached = store.get('norm:' + k, 60 * 864e5);
+  if (cached) { state.norm[k] = cached; return cached; }
+
+  const raw = await fetchJSON(
+    `https://archive-api.open-meteo.com/v1/archive?latitude=${loc.lat}&longitude=${loc.lon}`
+    + `&start_date=2010-01-01&end_date=2024-12-31`
+    + `&daily=temperature_2m_mean,precipitation_sum&timezone=UTC`, { retries: 1, timeout: 45000 });
+
+  const d = raw.daily;
+  if (!d || !d.time) throw new Error('No archive data');
+  const sT = new Array(367).fill(0), cT = new Array(367).fill(0);
+  const sP = new Array(367).fill(0), cP = new Array(367).fill(0);
+  for (let i = 0; i < d.time.length; i++) {
+    const k2 = doyOf(d.time[i]);
+    if (num(d.temperature_2m_mean[i])) { sT[k2] += d.temperature_2m_mean[i]; cT[k2]++; }
+    if (num(d.precipitation_sum[i]))   { sP[k2] += d.precipitation_sum[i];   cP[k2]++; }
+  }
+  const smooth = (s, c) => {
+    const out = new Array(367).fill(null);
+    for (let day = 1; day <= 366; day++) {
+      let ss = 0, cc = 0;
+      for (let o = -7; o <= 7; o++) {
+        let x = day + o; if (x < 1) x += 366; if (x > 366) x -= 366;
+        ss += s[x]; cc += c[x];
+      }
+      out[day] = cc ? ss / cc : null;
+    }
+    return out;
+  };
+  const norm = { t: smooth(sT, cT), p: smooth(sP, cP), years: 15 };
+  state.norm[k] = norm;
+  store.set('norm:' + k, norm);
+  return norm;
+}
+
+/* ─────────── derived metrics ─────────── */
+
+function phaseOf(v) {
+  if (!num(v)) return { name: 'Unknown', key: 'neutral', strength: '', color: 'var(--txt-2)', glow: 'rgba(120,130,145,.16)' };
+  if (v >= 0.5) {
+    const s = v >= 2 ? 'Very strong' : v >= 1.5 ? 'Strong' : v >= 1.0 ? 'Moderate' : 'Weak';
+    return { name: 'El Niño', key: 'elnino', strength: s + ' event', color: 'var(--warm)', glow: 'rgba(255,138,76,.22)' };
+  }
+  if (v <= -0.5) {
+    const s = v <= -2 ? 'Very strong' : v <= -1.5 ? 'Strong' : v <= -1.0 ? 'Moderate' : 'Weak';
+    return { name: 'La Niña', key: 'lanina', strength: s + ' event', color: 'var(--cool)', glow: 'rgba(86,184,255,.2)' };
+  }
+  return { name: 'ENSO-neutral', key: 'neutral', strength: 'Within ±0.5 °C of normal',
+           color: 'var(--txt)', glow: 'rgba(120,130,145,.16)' };
+}
+
+/* The value the phase label follows: a pinned official ONI wins, then our own
+   estimate — but only when it rests on real sea-surface temperature. */
+function headlineAnom() {
+  if (state.oni && num(state.oni.value)) return state.oni.value;
+  if (state.enso && state.enso.absolute) return state.enso.anom90 ?? state.enso.anom;
+  return null;
+}
+
+/* Per-location summary used by cards, alerts and the detail view. */
+function summarize(loc) {
+  const f = fcOf(loc);
+  if (!f || !f.current || !f.daily) return null;
+  const c = f.current, d = f.daily, n = state.norm[keyOf(loc)];
+  const todayMean = (d.temperature_2m_max[0] + d.temperature_2m_min[0]) / 2;
+  const doy = doyOf(d.time[0]);
+
+  let tAnom = null, pPct = null, pNorm = null;
+  if (n) {
+    if (num(n.t[doy])) tAnom = todayMean - n.t[doy];
+    let sumF = 0, sumN = 0, ok = true;
+    for (let i = 0; i < d.time.length; i++) {
+      sumF += d.precipitation_sum[i] || 0;
+      const v = n.p[doyOf(d.time[i])];
+      if (num(v)) sumN += v; else ok = false;
+    }
+    if (ok) { pNorm = sumN; pPct = sumN > 0.6 ? (sumF / sumN) * 100 : (sumF > 3 ? 999 : null); }
+  }
+  const p7 = d.precipitation_sum.reduce((s, v) => s + (v || 0), 0);
+
+  return {
+    loc, f, cur: c, daily: d, tAnom, pPct, pNorm, p7,
+    code: c.weather_code, isDay: c.is_day,
+    label: decode(c.weather_code)[0],
+    hourIdx: hourIndex(f),
+  };
+}
+
+function hourIndex(f) {
+  if (!f.hourly || !f.hourly.time || !f.current) return 0;
+  const want = f.current.time.slice(0, 13);
+  const i = f.hourly.time.findIndex(t => t.slice(0, 13) === want);
+  return i >= 0 ? i : 0;
+}
+
+/* Live watch items across every tracked location. */
+function buildAlerts() {
+  const out = [];
+  const push = (sev, title, body) => out.push({ sev, title, body });
+  const locs = [...SPOTLIGHTS, ...state.watch.map(w => ({ ...w, region: 'generic' }))];
+
+  for (const loc of locs) {
+    const s = summarize(loc);
+    if (!s) continue;
+    const nm = loc.name;
+    const d = s.daily;
+
+    const maxApp = Math.max(...d.temperature_2m_max);
+    if (maxApp >= 42) push(3, `${nm}: extreme heat`,
+      `Peaks at ${fx(T(maxApp), 0)}${U()} this week — outdoor work and travel windows need managing.`);
+    else if (maxApp >= 38) push(2, `${nm}: high heat`,
+      `Reaching ${fx(T(maxApp), 0)}${U()} this week.`);
+
+    const wet = d.precipitation_sum.map((v, i) => ({ v, i })).filter(x => x.v >= 25);
+    if (wet.length) {
+      const worst = wet.reduce((a, b) => b.v > a.v ? b : a);
+      push(worst.v >= 60 ? 3 : 2, `${nm}: heavy rain`,
+        `${fx(worst.v, 0)} mm forecast on ${dayName(d.time[worst.i], s.f.timezone)} — flooding and access risk.`);
+    }
+    const gust = Math.max(...(d.wind_speed_10m_max || [0]));
+    if (gust >= 60) push(2, `${nm}: strong wind`, `Gusting to ${fx(gust, 0)} km/h this week.`);
+
+    if (num(s.tAnom) && Math.abs(s.tAnom) >= 3)
+      push(Math.abs(s.tAnom) >= 5 ? 3 : 2, `${nm}: ${s.tAnom > 0 ? 'well above' : 'well below'} normal`,
+        `${signed(dT(s.tAnom))}${U()} against the 15-year normal for today.`);
+
+    if (num(s.pPct) && s.pNorm >= 8) {
+      if (s.pPct <= 25) push(2, `${nm}: dry week ahead`,
+        `${fx(s.p7, 0)} mm forecast vs ${fx(s.pNorm, 0)} mm normal — ${fx(s.pPct, 0)}% of normal.`);
+      else if (s.pPct >= 220) push(2, `${nm}: much wetter than normal`,
+        `${fx(s.p7, 0)} mm vs ${fx(s.pNorm, 0)} mm normal — ${fx(Math.min(s.pPct, 999), 0)}% of normal.`);
+    }
+  }
+
+  const h = headlineAnom(), ph = phaseOf(h);
+  if (num(h) && ph.key !== 'neutral')
+    out.unshift({ sev: Math.abs(h) >= 1.5 ? 3 : 2, title: `${ph.name} conditions — ${ph.strength.toLowerCase()}`,
+      body: `Niño 3.4 anomaly ${signed(h)} °C. Indonesia and Thailand carry the strongest local signal.` });
+
+  out.sort((a, b) => b.sev - a.sev);
+  return out.slice(0, 10);
+}
+
+function dayName(t, tz) {
+  try { return new Date(t + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', timeZone: tz }); }
+  catch { return new Date(t + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short' }); }
+}
+
+/* ─────────── chart primitives ─────────── */
+
+/* Charts are drawn in real pixels — the viewBox matches the measured box, so
+   nothing is stretched and label text keeps its true size. */
+function boxOf(el, fallbackH = 170) {
+  const r = el.getBoundingClientRect();
+  return {
+    w: Math.max(200, Math.round(r.width) || 320),
+    h: Math.max(110, Math.round(r.height) || fallbackH),
+  };
+}
+
+function lineChart(el, pts, opts = {}) {
+  if (!pts.length) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+  const { w: W, h: H } = boxOf(el);
+  const pad = { l: 36, r: 12, t: 12, b: 22 };
+  const ys = pts.map(p => p.y).filter(num);
+  if (!ys.length) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+  let min = opts.min ?? Math.min(...ys), max = opts.max ?? Math.max(...ys);
+  if (max - min < 1e-6) { max += 0.5; min -= 0.5; }
+  const fmt = opts.fmt || (v => v.toFixed(1));
+  const px = i => pad.l + (i / Math.max(1, pts.length - 1)) * (W - pad.l - pad.r);
+  const py = v => pad.t + (1 - (clamp(v, min, max) - min) / (max - min)) * (H - pad.t - pad.b);
+
+  let line = '', area = '', open = false, lastI = -1;
+  pts.forEach((p, i) => {
+    if (!num(p.y)) return;
+    const x = px(i).toFixed(1), y = py(p.y).toFixed(1);
+    if (!open) { line += `M${x} ${y}`; area += `M${x} ${py(min).toFixed(1)}L${x} ${y}`; open = true; }
+    else { line += `L${x} ${y}`; area += `L${x} ${y}`; }
+    lastI = i;
+  });
+  if (open) area += `L${px(lastI).toFixed(1)} ${py(min).toFixed(1)}Z`;
+
+  const grid = [0, .25, .5, .75, 1].map(f => {
+    const v = min + (max - min) * f, y = py(v).toFixed(1);
+    return `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y}" y2="${y}" stroke="#2c2f34" stroke-width="1"/>
+      <text x="${pad.l - 7}" y="${(+y + 3.5).toFixed(1)}" fill="#6e747f" font-size="10"
+        text-anchor="end">${esc(fmt(v))}</text>`;
+  }).join('');
+
+  const zeroLine = (opts.zero !== undefined && opts.zero > min && opts.zero < max)
+    ? `<line x1="${pad.l}" x2="${W - pad.r}" y1="${py(opts.zero).toFixed(1)}" y2="${py(opts.zero).toFixed(1)}"
+        stroke="#828b98" stroke-width="1" stroke-dasharray="4 4"/>` : '';
+
+  const labels = (opts.labels || []).map(l =>
+    `<text x="${px(l.i).toFixed(1)}" y="${H - 6}" fill="#6e747f" font-size="10"
+      text-anchor="${l.i === 0 ? 'start' : l.i >= pts.length - 1 ? 'end' : 'middle'}">${esc(l.text)}</text>`).join('');
+
+  const dot = lastI >= 0
+    ? `<circle cx="${px(lastI).toFixed(1)}" cy="${py(pts[lastI].y).toFixed(1)}" r="3.4"
+        fill="${opts.color || '#4c9bff'}" stroke="#161719" stroke-width="1.6"/>` : '';
+
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+    <defs><linearGradient id="g${opts.gid || 0}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${opts.color || '#4c9bff'}" stop-opacity=".30"/>
+      <stop offset="1" stop-color="${opts.color || '#4c9bff'}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${grid}${zeroLine}
+    <path d="${area}" fill="url(#g${opts.gid || 0})"/>
+    <path d="${line}" fill="none" stroke="${opts.color || '#4c9bff'}" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    ${dot}${labels}
+  </svg>`;
+}
+
+function barChart(el, pts, opts = {}) {
+  if (!pts.length) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+  const { w: W, h: H } = boxOf(el);
+  const pad = { l: 36, r: 12, t: 12, b: 22 };
+  const max = opts.max ?? Math.max(1, ...pts.map(p => p.y || 0));
+  const fmt = opts.fmt || (v => String(Math.round(v)));
+  const plotH = H - pad.t - pad.b;
+  const bw = (W - pad.l - pad.r) / pts.length;
+  const grid = [0, .5, 1].map(f => {
+    const y = (pad.t + (1 - f) * plotH).toFixed(1);
+    return `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y}" y2="${y}" stroke="#2c2f34" stroke-width="1"/>
+      <text x="${pad.l - 7}" y="${(+y + 3.5).toFixed(1)}" fill="#6e747f" font-size="10"
+        text-anchor="end">${esc(fmt(max * f))}</text>`;
+  }).join('');
+  const bars = pts.map((p, i) => {
+    const h = ((p.y || 0) / max) * plotH;
+    return `<rect x="${(pad.l + i * bw + bw * .2).toFixed(1)}" y="${(H - pad.b - h).toFixed(1)}"
+      width="${(bw * .6).toFixed(1)}" height="${Math.max(h, 2).toFixed(1)}" rx="2.5"
+      fill="${opts.color || '#4c9bff'}" opacity=".9"/>`;
+  }).join('');
+  const labels = (opts.labels || []).map(l =>
+    `<text x="${(pad.l + l.i * bw + bw / 2).toFixed(1)}" y="${H - 6}" fill="#6e747f"
+      font-size="10" text-anchor="middle">${esc(l.text)}</text>`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${grid}${bars}${labels}</svg>`;
+}
+
+/* ─────────── rendering ─────────── */
+
+function render() {
+  renderStamp();
+  renderEnso();
+  renderAlerts();
+  renderSpots();
+  renderRail();
+  renderDetail();
+}
+
+function renderStamp() {
+  const el = $('#stamp');
+  if (state.error && !state.fetchedAt) { el.innerHTML = '<b style="color:var(--hot)">offline</b>'; return; }
+  if (!state.fetchedAt) { el.textContent = 'loading…'; return; }
+  const mins = Math.round((Date.now() - state.fetchedAt) / 60000);
+  el.innerHTML = 'updated <b>' + (mins < 1 ? 'just now' : mins + ' min ago') + '</b>';
+  $('#banner').classList.toggle('show', !!state.error);
+  if (state.error) $('#banner').textContent = 'Live update failed — showing the last data this browser cached. ' + state.error;
+}
+
+function renderEnso() {
+  const e = state.enso;
+  const h = headlineAnom(), ph = phaseOf(h);
+  const uncal = e && !e.absolute && !(state.oni && num(state.oni.value));
+
+  $('#phaseCard').style.setProperty('--phase-glow', ph.glow);
+  $('#phaseName').textContent = uncal ? 'Needs calibration' : ph.name;
+  $('#phaseName').style.color = uncal ? 'var(--txt-2)' : ph.color;
+  $('#phaseStrength').textContent = uncal
+    ? 'Sea-surface data unavailable — trend only. Pin the official ONI below.'
+    : (ph.strength || '—');
+  $('#phasePill').textContent = num(h)
+    ? `${ph.name} · Niño 3.4 ${signed(h)} °C`
+    : uncal ? 'ENSO phase needs calibration' : 'ENSO state unavailable';
+  $('#anomVal').textContent = signed(h);
+  $('#scaleMark').style.left = clamp(((num(h) ? h : 0) + 3) / 6 * 100, 1, 99) + '%';
+  $('#scaleMark').style.opacity = num(h) ? 1 : .25;
+
+  $('#sstLabel').textContent = e && e.absolute ? 'Niño 3.4 SST now' : 'Niño 3.4 proxy now';
+  $('#sstNow').textContent  = e && num(e.sst) ? fx(T(e.sst), 1) + ' ' + U() : '–';
+  $('#anom90').textContent  = e && e.absolute && num(e.anom90) ? signed(e.anom90) + ' °C' : '–';
+  $('#anomTrend').textContent = e && num(e.trend)
+    ? (e.trend > 0.08 ? 'warming ' : e.trend < -0.08 ? 'cooling ' : 'steady ') + signed(e.trend, 2) + ' °C' : '–';
+  $('#oniOfficial').textContent = state.oni && num(state.oni.value)
+    ? signed(state.oni.value) + ' °C' + (state.oni.season ? ' (' + state.oni.season + ')' : '') : 'not set';
+
+  const chip = $('#trendChip');
+  if (e && num(e.trend)) {
+    chip.textContent = (e.trend > 0.08 ? '↗ warming' : e.trend < -0.08 ? '↘ cooling' : '→ steady');
+    chip.className = 'chip ' + (e.trend > 0.08 ? 'warm' : e.trend < -0.08 ? 'cool' : '');
+  } else chip.textContent = '–';
+
+  if (e && e.series && e.series.length) {
+    $('#trendRange').textContent = `last ${e.days} days · ${e.source}`
+      + (e.absolute ? '' : ' · shown against its own mean');
+    const s = e.series;
+    /* An uncalibrated proxy has a meaningful shape but a meaningless offset,
+       so plot it around its own mean rather than against the SST climatology. */
+    const off = e.absolute ? 0 : s.reduce((t, x) => t + x.a, 0) / s.length;
+    const step = Math.max(1, Math.floor(s.length / 4));
+    const labels = [];
+    for (let i = 0; i < s.length; i += step)
+      labels.push({ i, text: new Date(s[i].d + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) });
+    lineChart($('#ensoChart'), s.map(x => ({ y: x.a - off })), {
+      color: (h ?? 0) >= 0.5 ? '#ff8a4c' : (h ?? 0) <= -0.5 ? '#56b8ff' : '#4c9bff',
+      zero: 0, gid: 1, labels, fmt: v => signed(v, 1),
+      min: Math.min(-0.6, ...s.map(x => x.a - off)) - 0.15,
+      max: Math.max(0.6, ...s.map(x => x.a - off)) + 0.15,
+    });
+  } else {
+    $('#ensoChart').innerHTML = '<div class="empty">Niño 3.4 series unavailable — check the CPC link for the official ONI.</div>';
+  }
+
+  const dir = { elnino:{5:'much drier',3:'wetter winters',2:'weak signal'},
+                lanina:{5:'much wetter',3:'drier winters',2:'weak signal'},
+                neutral:{5:'near normal',3:'no ENSO steer',2:'no ENSO steer'} }[ph.key];
+  $('#sensList').innerHTML = SPOTLIGHTS.map(s => {
+    const L = LENS[s.region], lv = L.sensitivity;
+    const conf = L[ph.key].conf;
+    const col = lv >= 5 ? 'var(--hot)' : lv >= 3 ? 'var(--warn)' : 'var(--txt-3)';
+    return `<div class="sens">
+      <div class="grow" style="min-width:0">
+        <div class="nm">${esc(s.country)}</div>
+        <div class="xs dim">${esc(dir[lv] || '')} · ${esc(conf)} confidence</div>
+      </div>
+      <span class="bar"><i style="width:${lv / 5 * 100}%;background:${col}"></i></span>
+      <span class="lv">${lv >= 5 ? 'strong' : lv >= 3 ? 'moderate' : 'weak'}</span></div>`;
+  }).join('');
+}
+
+function renderAlerts() {
+  const items = buildAlerts();
+  const el = $('#alerts');
+  if (!items.length) {
+    el.innerHTML = `<div class="alert sev-1"><span class="dot"></span><div>
+      <b>Nothing unusual right now</b><span>No heat, rain, wind or anomaly thresholds are being crossed across the tracked locations.</span>
+    </div></div>`;
+    return;
+  }
+  el.innerHTML = items.map(a => `<div class="alert sev-${a.sev}"><span class="dot"></span><div>
+    <b>${esc(a.title)}</b><span>${esc(a.body)}</span></div></div>`).join('');
+}
+
+function anomChip(tAnom) {
+  if (!num(tAnom)) return '<span class="chip">normal pending</span>';
+  const v = dT(tAnom), a = Math.abs(tAnom);
+  const cls = tAnom > 0 ? (a >= 3 ? 'hot' : 'warm') : (a >= 3 ? 'cool' : '');
+  return `<span class="chip ${cls}">${signed(v)}${U()} vs normal</span>`;
+}
+function rainChip(pPct) {
+  if (!num(pPct)) return '';
+  if (pPct >= 999) return '<span class="chip wet">rain vs a dry normal</span>';
+  const cls = pPct <= 40 ? 'dry' : pPct >= 180 ? 'wet' : '';
+  return `<span class="chip ${cls}">${Math.round(pPct)}% of normal rain</span>`;
+}
+
+function renderSpots() {
+  $('#spots').innerHTML = SPOTLIGHTS.map(s => {
+    const sum = summarize(s);
+    const on = state.selected === s.id ? ' on' : '';
+    if (!sum) return `<button class="spot${on}" data-loc="${s.id}">
+        <div class="spot-nm">${esc(s.name)}</div><div class="spot-sub">${esc(s.country)}</div>
+        <div class="spot-temp skel" style="margin-top:12px">00°</div></button>`;
+    const d = sum.daily;
+    const maxP = Math.max(1, ...d.precipitation_sum);
+    return `<button class="spot${on}" data-loc="${s.id}" aria-pressed="${state.selected === s.id}">
+      <div class="row" style="align-items:flex-start">
+        <div class="grow">
+          <div class="spot-nm">${esc(s.name)}</div>
+          <div class="spot-sub">${esc(s.label ? s.label + ' · ' : '')}${esc(s.country)}</div>
+        </div>
+        ${icon(sum.code, sum.isDay, 'spot-ico')}
+      </div>
+      <div class="spot-temp" style="margin-top:8px">${fx(T(sum.cur.temperature_2m), 0)}°</div>
+      <div class="spot-sub" style="margin-bottom:9px">${esc(sum.label)} · feels ${fx(T(sum.cur.apparent_temperature), 0)}°</div>
+      <div class="row wrap-w" style="gap:5px">${anomChip(sum.tAnom)}${rainChip(sum.pPct)}</div>
+      <div class="spark" title="7-day rainfall">${d.precipitation_sum
+        .map(v => `<i style="height:${Math.max(6, (v / maxP) * 100)}%;opacity:${v > 0 ? .9 : .25}"></i>`).join('')}</div>
+    </button>`;
+  }).join('');
+}
+
+function cityRow(loc, removable) {
+  const sum = summarize(loc);
+  const on = state.selected === loc.id ? ' on' : '';
+  return `<div class="city${on}" data-loc="${loc.id}" role="button" tabindex="0">
+    ${sum ? icon(sum.code, sum.isDay, 'ci') : '<div class="ci"></div>'}
+    <div class="grow" style="min-width:0">
+      <div class="cn">${esc(loc.name)}</div>
+      <div class="cc">${esc(sum ? sum.label : loc.country || '')}</div>
+    </div>
+    <div class="ct">${sum ? fx(T(sum.cur.temperature_2m), 0) + '°' : '–'}</div>
+    ${removable ? `<button class="city-x" data-rm="${loc.id}" title="Remove" aria-label="Remove ${esc(loc.name)}">×</button>` : ''}
+  </div>`;
+}
+
+function renderRail() {
+  $('#railSpots').innerHTML = SPOTLIGHTS.map(s => cityRow(s, false)).join('');
+  $('#railWatch').innerHTML = state.watch.length
+    ? state.watch.map(w => cityRow(w, true)).join('')
+    : '<div class="empty">Watch list is empty.</div>';
+
+  const loc = locById(state.selected), f = fcOf(loc);
+  const el = $('#rainChart');
+  if (!f || !f.hourly) { el.innerHTML = '<div class="empty">No data</div>'; return; }
+  const i0 = hourIndex(f), h = f.hourly;
+  const pts = [], labels = [];
+  for (let i = i0; i < Math.min(i0 + 25, h.time.length); i++) {
+    const k = pts.length;
+    pts.push({ y: h.precipitation_probability ? h.precipitation_probability[i] : null });
+    if (k % 6 === 0) labels.push({ i: k, text: h.time[i].slice(11, 16) });
+  }
+  $('#rainNote').textContent = 'next 24 hours · ' + loc.name;
+  lineChart(el, pts, { color: '#4c9bff', min: 0, max: 100, gid: 2, labels,
+    fmt: v => Math.round(v) + '%' });
+}
+
+function renderDetail() {
+  const loc = locById(state.selected);
+  const sum = summarize(loc);
+  $('#detailTitle').textContent = loc.name + (loc.country ? ', ' + loc.country : '');
+
+  if (!sum) {
+    $('#detailNote').textContent = 'loading…';
+    $('#nowCard').innerHTML = '<div class="empty">Fetching live conditions…</div>';
+    $('#daysCard').innerHTML = ''; $('#tiles').innerHTML = '';
+    $('#anomCard').innerHTML = ''; $('#lensCard').innerHTML = ''; $('#areaCard').innerHTML = '';
+    return;
+  }
+
+  const f = sum.f, c = sum.cur, d = sum.daily, h = f.hourly, i0 = sum.hourIdx;
+  let localTime = '';
+  try {
+    localTime = new Date().toLocaleTimeString(undefined,
+      { hour: '2-digit', minute: '2-digit', timeZone: f.timezone });
+  } catch { localTime = c.time.slice(11, 16); }
+  $('#detailNote').textContent = `local time ${localTime} · ${f.timezone_abbreviation || f.timezone || ''}`;
+
+  /* now */
+  const sr = (d.sunrise && d.sunrise[0] || '').slice(11, 16);
+  const ss = (d.sunset  && d.sunset[0]  || '').slice(11, 16);
+  $('#nowCard').innerHTML = `<div class="now">
+    ${icon(sum.code, sum.isDay, 'now-ico')}
+    <div>
+      <div class="now-temp">${fx(T(c.temperature_2m), 0)}°</div>
+      <div class="muted sm" style="margin-top:6px">${esc(sum.label)}</div>
+      <div class="row wrap-w" style="gap:6px;margin-top:9px">${anomChip(sum.tAnom)}${rainChip(sum.pPct)}</div>
+    </div>
+    <div class="now-grid">
+      <div><span>Feels like</span><b>${fx(T(c.apparent_temperature), 0)}${U()}</b></div>
+      <div><span>Humidity</span><b>${fx(c.relative_humidity_2m, 0)}%</b></div>
+      <div><span>Wind</span><b>${fx(c.wind_speed_10m, 0)} km/h ${compass(c.wind_direction_10m)}</b></div>
+      <div><span>Gusts</span><b>${fx(c.wind_gusts_10m, 0)} km/h</b></div>
+      <div><span>Pressure</span><b>${fx(c.surface_pressure, 0)} hPa</b></div>
+      <div><span>Cloud</span><b>${fx(c.cloud_cover, 0)}%</b></div>
+      <div><span>Sunrise</span><b>${sr || '–'}</b></div>
+      <div><span>Sunset</span><b>${ss || '–'}</b></div>
+    </div>
+  </div>`;
+
+  /* 7 days */
+  $('#daysCard').innerHTML = `<div class="h" style="margin-bottom:10px">Next 7 days</div>
+    <div class="days">${d.time.map((t, i) => `
+      <div class="day${i === 0 ? ' on' : ''}">
+        <div class="dw">${i === 0 ? 'Today' : dayName(t, f.timezone)}</div>
+        ${icon(d.weather_code[i], 1, 'di')}
+        <div class="dt">${fx(T(d.temperature_2m_max[i]), 0)}°</div>
+        <div class="dn">${fx(T(d.temperature_2m_min[i]), 0)}°</div>
+        <div class="dp">${fx(d.precipitation_probability_max ? d.precipitation_probability_max[i] : null, 0)}%</div>
+      </div>`).join('')}</div>`;
+
+  /* tiles */
+  const vis = h.visibility ? h.visibility[i0] : null;
+  const uv  = h.uv_index ? h.uv_index[i0] : (d.uv_index_max ? d.uv_index_max[0] : null);
+  const uvTxt = !num(uv) ? '' : uv < 3 ? 'Low' : uv < 6 ? 'Moderate' : uv < 8 ? 'High' : uv < 11 ? 'Very high' : 'Extreme';
+  const wind24 = [];
+  for (let i = i0; i < Math.min(i0 + 24, h.time.length); i++) wind24.push(h.wind_speed_10m[i]);
+  const wMax = Math.max(1, ...wind24);
+
+  $('#tiles').innerHTML = `
+    <div class="tile"><div class="h">Wind</div>
+      <div class="tv">${fx(c.wind_speed_10m, 1)}<small>km/h ${compass(c.wind_direction_10m)}</small></div>
+      <div class="spark" style="height:34px">${wind24.map(v =>
+        `<i style="height:${Math.max(8, v / wMax * 100)}%;background:#7a8698"></i>`).join('')}</div>
+      <div class="tn">Peak today ${fx(d.wind_speed_10m_max ? d.wind_speed_10m_max[0] : null, 0)} km/h</div></div>
+
+    <div class="tile"><div class="h">UV index</div>
+      <div class="tv">${fx(uv, 1)}<small>${uvTxt}</small></div>
+      <div class="meter"><i style="width:${clamp((uv || 0) / 12 * 100, 2, 100)}%;
+        background:${(uv || 0) >= 8 ? 'var(--hot)' : (uv || 0) >= 6 ? 'var(--warm)' : 'var(--good)'}"></i></div>
+      <div class="tn">${num(uv) && uv >= 8 ? 'Limit midday exposure — burn time under 20 minutes.' : 'Peak today ' + fx(d.uv_index_max ? d.uv_index_max[0] : null, 1) + '.'}</div></div>
+
+    <div class="tile"><div class="h">Humidity</div>
+      <div class="tv">${fx(c.relative_humidity_2m, 0)}<small>%</small></div>
+      <div class="meter"><i style="width:${clamp(c.relative_humidity_2m, 2, 100)}%"></i></div>
+      <div class="tn">${c.relative_humidity_2m >= 70 && c.temperature_2m >= 30
+        ? 'High heat and humidity together — heat stress risk outdoors.'
+        : c.relative_humidity_2m <= 25 ? 'Dry air — elevated fire and dust risk.' : 'Comfortable range.'}</div></div>
+
+    <div class="tile"><div class="h">Visibility</div>
+      <div class="tv">${num(vis) ? fx(vis / 1000, 1) : '–'}<small>km</small></div>
+      <div class="meter"><i style="width:${clamp((vis || 0) / 20000 * 100, 2, 100)}%"></i></div>
+      <div class="tn">${num(vis) && vis < 5000 ? 'Reduced visibility — haze, dust or fog affecting travel.' : 'Clear.'}</div></div>
+
+    <div class="tile"><div class="h">Rain, next 7 days</div>
+      <div class="tv">${fx(sum.p7, 1)}<small>mm</small></div>
+      <div class="tn">${num(sum.pNorm)
+        ? `Normal for this week is ${fx(sum.pNorm, 1)} mm${num(sum.pPct) && sum.pPct < 999 ? ` — ${Math.round(sum.pPct)}% of normal.` : '.'}`
+        : 'Building the local normal…'}</div></div>
+
+    <div class="tile"><div class="h">Pressure</div>
+      <div class="tv">${fx(c.surface_pressure, 0)}<small>hPa</small></div>
+      <div class="tn">${c.surface_pressure < 1005 ? 'Low pressure — unsettled.'
+        : c.surface_pressure > 1020 ? 'High pressure — settled and stable.' : 'Near normal.'}</div></div>`;
+
+  /* anomaly chart */
+  const n = state.norm[keyOf(loc)];
+  if (n) {
+    const pts = d.time.map((t, i) => ({
+      y: (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2 - (n.t[doyOf(t)] ?? NaN),
+    })).map(p => ({ y: num(p.y) ? dT(p.y) : null }));
+    $('#anomCard').innerHTML = `<div class="row"><div class="grow">
+        <div class="h">Temperature vs normal</div>
+        <div class="xs dim">daily mean minus the 2010–2024 normal for each date</div></div>
+        ${anomChip(sum.tAnom)}</div>
+      <div class="chart-wrap" style="height:196px;min-height:196px;margin-top:10px" id="anomChart"></div>`;
+    lineChart($('#anomChart'), pts, {
+      color: (sum.tAnom ?? 0) >= 0 ? '#ff8a4c' : '#56b8ff', zero: 0, gid: 3,
+      fmt: v => signed(v, 1),
+      labels: d.time.map((t, i) => ({ i, text: i === 0 ? 'Today' : dayName(t, f.timezone) })),
+      min: Math.min(-2, ...pts.map(p => p.y ?? 0)) - .5,
+      max: Math.max(2, ...pts.map(p => p.y ?? 0)) + .5,
+    });
+  } else {
+    $('#anomCard').innerHTML = `<div class="h">Temperature vs normal</div>
+      <div class="empty">Building the 2010–2024 normal for ${esc(loc.name)} from the ERA5 archive — this runs once and is then cached in your browser.</div>`;
+  }
+
+  /* El Niño lens */
+  const ph = phaseOf(headlineAnom());
+  const L = LENS[loc.region] || LENS.generic;
+  const lens = L[ph.key];
+  $('#lensCard').innerHTML = `
+    <div class="row wrap-w" style="margin-bottom:12px">
+      <div class="grow"><div class="h">El Niño lens — ${esc(L.title)}</div>
+        <div class="xs dim">what ${esc(ph.name)} typically means here</div></div>
+      <span class="conf conf-${esc(lens.conf)}">${esc(lens.conf)} confidence</span>
+    </div>
+    <div class="lens">
+      <div><p>${esc(lens.text)}</p></div>
+      <div>
+        <div class="h" style="margin-bottom:2px">What it means operationally</div>
+        <ul>${lens.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+        ${L.watch.length ? `<div class="h" style="margin:16px 0 6px">Seasonal watch points</div>
+          <div class="row wrap-w" style="gap:6px">${L.watch.map(w => `<span class="chip">${esc(w)}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>`;
+
+  /* rest of the country */
+  if (loc.area && loc.area.length) {
+    $('#areaCard').style.display = '';
+    $('#areaCard').innerHTML = `<div class="h" style="margin-bottom:12px">Elsewhere in ${esc(loc.country)}</div>
+      <div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      ${loc.area.map(a => {
+        const af = state.fc[keyOf(a)];
+        if (!af || !af.current) return `<div class="tile" style="min-height:auto"><div class="h">${esc(a.name)}</div>
+          <div class="tv skel">00°</div></div>`;
+        const ad = af.daily;
+        const rain = ad ? ad.precipitation_sum.reduce((s, v) => s + (v || 0), 0) : null;
+        return `<div class="tile" style="min-height:auto">
+          <div class="row"><div class="h grow">${esc(a.name)}</div>${icon(af.current.weather_code, af.current.is_day, 'ai')}</div>
+          <div class="tv">${fx(T(af.current.temperature_2m), 0)}°</div>
+          <div class="tn">${esc(decode(af.current.weather_code)[0])}${num(rain) ? ` · ${fx(rain, 0)} mm/7d` : ''}</div>
+        </div>`;
+      }).join('')}</div>`;
+  } else {
+    $('#areaCard').style.display = 'none';
+  }
+}
+
+function compass(deg) {
+  if (!num(deg)) return '';
+  return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+    [Math.round(deg / 22.5) % 16];
+}
+
+/* ─────────── data orchestration ─────────── */
+
+async function refreshAll({ quiet = false } = {}) {
+  if (!quiet) { $('#refresh').classList.add('on'); $('#refresh').disabled = true; }
+  state.error = null;
+  try {
+    await Promise.all([
+      loadForecasts(),
+      loadEnso().catch(e => { console.warn('ENSO fetch failed:', e); }),
+    ]);
+    state.fetchedAt = Date.now();
+    store.set('fetchedAt', state.fetchedAt);
+  } catch (e) {
+    state.error = (e && e.message) || 'network error';
+    console.error(e);
+  }
+  render();
+  $('#refresh').classList.remove('on'); $('#refresh').disabled = false;
+  backfillNormals();
+}
+
+/* Climatology is heavy, so fetch it sequentially in the background and re-render
+   as each location lands. Cached for 60 days per location. */
+let normalsRunning = false;
+async function backfillNormals() {
+  if (normalsRunning) return;
+  normalsRunning = true;
+  const queue = [...SPOTLIGHTS, locById(state.selected), ...state.watch]
+    .filter((l, i, a) => a.findIndex(x => keyOf(x) === keyOf(l)) === i);
+  for (const loc of queue) {
+    if (state.norm[keyOf(loc)]) continue;
+    try { await loadNormals(loc); render(); }
+    catch (e) { console.warn('normals failed for', loc.name, e); }
+    await sleep(180);
+  }
+  normalsRunning = false;
+}
+
+/* ─────────── events ─────────── */
+
+document.addEventListener('click', e => {
+  const spot = e.target.closest('[data-loc]');
+  const rm = e.target.closest('[data-rm]');
+
+  if (rm) {
+    e.stopPropagation();
+    state.watch = state.watch.filter(w => w.id !== rm.dataset.rm);
+    store.set('watch', state.watch);
+    if (state.selected === rm.dataset.rm) state.selected = 'dubai';
+    render();
+    return;
+  }
+  if (spot) {
+    state.selected = spot.dataset.loc;
+    store.set('selected', state.selected);
+    render();
+    const loc = locById(state.selected);
+    if (!state.norm[keyOf(loc)]) loadNormals(loc).then(render).catch(() => {});
+    return;
+  }
+  if (!e.target.closest('.search')) $('#results').hidden = true;
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const c = e.target.closest && e.target.closest('.city[data-loc]');
+    if (c) { e.preventDefault(); c.click(); }
+  }
+  if (e.key === 'Escape') $('#results').hidden = true;
+});
+
+$$('[data-unit]').forEach(b => b.addEventListener('click', () => {
+  state.unit = b.dataset.unit;
+  store.set('unit', state.unit);
+  $$('[data-unit]').forEach(x => x.classList.toggle('on', x === b));
+  render();
+}));
+
+$('#refresh').addEventListener('click', () => refreshAll());
+
+$('#resetWatch').addEventListener('click', () => {
+  state.watch = DEFAULT_WATCH.slice();
+  store.set('watch', state.watch);
+  refreshAll({ quiet: true });
+});
+
+/* city search */
+let searchTimer;
+$('#q').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  const v = e.target.value.trim();
+  if (v.length < 2) { $('#results').hidden = true; return; }
+  searchTimer = setTimeout(async () => {
+    try {
+      const r = await fetchJSON(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=6&language=en&format=json`,
+        { retries: 1, timeout: 12000 });
+      const list = r.results || [];
+      const el = $('#results');
+      el.hidden = false;
+      el.innerHTML = list.length
+        ? list.map(x => `<button data-add='${esc(JSON.stringify({
+              id: 'w-' + x.id, name: x.name, country: x.country || '',
+              lat: +x.latitude.toFixed(4), lon: +x.longitude.toFixed(4) }))}'>
+            ${esc(x.name)}<div class="r2">${esc([x.admin1, x.country].filter(Boolean).join(', '))}</div></button>`).join('')
+        : '<div class="empty">No match</div>';
+    } catch {
+      $('#results').hidden = false;
+      $('#results').innerHTML = '<div class="empty">Search unavailable</div>';
+    }
+  }, 320);
+});
+
+$('#results').addEventListener('click', e => {
+  const b = e.target.closest('[data-add]');
+  if (!b) return;
+  const loc = JSON.parse(b.dataset.add);
+  if (!state.watch.some(w => w.id === loc.id)) {
+    state.watch.unshift(loc);
+    state.watch = state.watch.slice(0, 14);
+    store.set('watch', state.watch);
+  }
+  state.selected = loc.id;
+  store.set('selected', state.selected);
+  $('#q').value = ''; $('#results').hidden = true;
+  refreshAll({ quiet: true });
+});
+
+/* dialogs */
+$('#about').addEventListener('click', () => $('#aboutDlg').showModal());
+$('#aboutClose').addEventListener('click', () => $('#aboutDlg').close());
+$('#setOni').addEventListener('click', () => {
+  if (state.oni) { $('#oniInput').value = state.oni.value; $('#oniSeason').value = state.oni.season || ''; }
+  $('#oniDlg').showModal();
+});
+$('#oniSave').addEventListener('click', () => {
+  const v = parseFloat($('#oniInput').value);
+  state.oni = num(v) ? { value: v, season: $('#oniSeason').value.trim() } : null;
+  store.set('oni', state.oni);
+  $('#oniDlg').close(); render();
+});
+$('#oniClear').addEventListener('click', () => {
+  state.oni = null; store.del('oni'); $('#oniInput').value = ''; $('#oniSeason').value = '';
+  $('#oniDlg').close(); render();
+});
+
+/* keep it current without a reload */
+setInterval(() => { if (!document.hidden) refreshAll({ quiet: true }); }, 15 * 60 * 1000);
+setInterval(renderStamp, 60 * 1000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && state.fetchedAt && Date.now() - state.fetchedAt > 10 * 60 * 1000)
+    refreshAll({ quiet: true });
+});
+
+/* charts are sized in pixels, so they need redrawing when the box changes */
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(render, 220);
+});
+
+/* ─────────── boot ─────────── */
+(function init() {
+  $$('[data-unit]').forEach(x => x.classList.toggle('on', x.dataset.unit === state.unit));
+
+  const cachedFc = store.get('fc', 3 * 3600e3);
+  const cachedEnso = store.get('enso', 24 * 3600e3);
+  if (cachedFc) { state.fc = cachedFc; state.fetchedAt = store.get('fetchedAt') || null; }
+  if (cachedEnso) state.enso = cachedEnso;
+  for (const loc of [...SPOTLIGHTS, ...state.watch]) {
+    const c = store.get('norm:' + keyOf(loc), 60 * 864e5);
+    if (c) state.norm[keyOf(loc)] = c;
+  }
+  render();
+  refreshAll({ quiet: true });
+})();
+</script>
+</body>
+</html>
