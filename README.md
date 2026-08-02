@@ -27,6 +27,29 @@ alongside. Any other city can be added to the watch list via search.
 - A live watch strip: heat, heavy rain, damaging wind and large anomalies
   across everything being tracked.
 
+**Four tabs**
+
+- **Overview** — the ENSO state, spotlight cards and per-location detail.
+- **Crisis watch** — observed fires, floods, storms and droughts from NASA
+  EONET and ReliefWeb, split into events near your locations (within
+  1,200 km) and the wider ENSO-sensitive world. These are observed events,
+  not attributions: ENSO shifts the seasonal odds of these event types, it
+  does not cause any individual one, and neither feed claims otherwise.
+- **Synthesis** — live variables combined into 0–100 drought, flood, heat,
+  fire and disruption indices, plus a 7-day disruption trajectory. Every
+  contributing term is printed with its value, so the number can be argued
+  with. The ENSO term is scaled by each region's teleconnection strength
+  *and* its confidence, so weak-signal regions get a near-zero ENSO push by
+  construction rather than by disclaimer.
+- **Simulator** — set ONI, rainfall, temperature anomaly, humidity, wind,
+  peak rain and horizon, and see the indices recompute for every region.
+  Define criteria ("ONI at or above 1.0 AND rainfall at or below 70% of
+  normal") and each is evaluated against both the simulated values and live
+  conditions right now. Criteria persist in the browser.
+
+The risk model is a transparent heuristic, not a validated forecast model.
+It is built for comparing scenarios, not for predicting outcomes.
+
 Data comes from the [Open-Meteo](https://open-meteo.com/) forecast, marine
 and ERA5 archive APIs. The watch list and the cached climate normals are
 stored in the browser only.

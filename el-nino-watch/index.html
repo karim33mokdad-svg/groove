@@ -248,6 +248,82 @@
   }
   @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 
+  /* ---------- tabs & views ---------- */
+  .tabs{display:flex;gap:6px;overflow-x:auto;margin:16px 0 2px;padding:4px;background:var(--panel);
+    border:1px solid var(--line);border-radius:999px;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tabs button{flex:1;white-space:nowrap;padding:10px 16px;border-radius:999px;font-size:13.5px;
+    font-weight:650;color:var(--txt-3);transition:.15s;display:flex;align-items:center;
+    justify-content:center;gap:7px;}
+  .tabs button:hover{color:var(--txt-2);}
+  .tabs button.on{background:#fff;color:#111;}
+  .badge{background:var(--hot);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;
+    padding:1px 6px;min-width:18px;}
+  .badge[hidden]{display:none;}
+  .tabs button.on .badge{background:var(--hot);color:#fff;}
+  .view{display:none;}
+  .view.on{display:block;}
+
+  /* ---------- crisis ---------- */
+  .crisis-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start;}
+  .chip-btn{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;
+    font-size:12.5px;font-weight:650;color:var(--txt-3);transition:.15s;}
+  .chip-btn:hover{color:var(--txt);border-color:#3c4149;}
+  .chip-btn.on{background:#fff;color:#111;border-color:#fff;}
+  .ev{display:flex;gap:12px;padding:13px 16px;border-top:1px solid var(--line);align-items:flex-start;}
+  .ev:first-child{border-top:none;}
+  .ev-ico{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;font-size:15px;}
+  .ev-fire{background:rgba(255,93,93,.15);} .ev-flood{background:rgba(76,155,255,.15);}
+  .ev-storm{background:rgba(122,140,255,.15);} .ev-drought{background:rgba(255,196,77,.15);}
+  .ev-other{background:var(--panel-3);}
+  .ev b{font-size:13.5px;font-weight:650;display:block;line-height:1.35;}
+  .ev .meta{font-size:11.5px;color:var(--txt-3);margin-top:3px;display:flex;flex-wrap:wrap;gap:8px;}
+  .ev a{font-size:11.5px;}
+
+  /* ---------- synthesis ---------- */
+  .synth{margin-bottom:14px;}
+  .ix-row{display:flex;align-items:center;gap:12px;padding:7px 0;}
+  .ix-row .lbl{width:104px;font-size:12.5px;font-weight:600;flex:none;}
+  .ix-bar{flex:1;height:9px;border-radius:999px;background:var(--panel-3);overflow:hidden;min-width:60px;}
+  .ix-bar i{display:block;height:100%;border-radius:999px;transition:width .4s;}
+  .ix-val{width:40px;text-align:right;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex:none;}
+  .ix-cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;}
+  .terms{font-size:12px;color:var(--txt-3);line-height:1.7;}
+  .terms b{color:var(--txt-2);font-weight:600;font-variant-numeric:tabular-nums;}
+  .terms .t{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:4px 0;}
+
+  /* ---------- simulator ---------- */
+  .sim-grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:14px;align-items:start;}
+  .sv{margin-top:13px;}
+  .sv-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .sv-top span{font-size:12.5px;color:var(--txt-2);}
+  .sv-top b{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .sv input[type=range]{width:100%;margin-top:6px;accent-color:var(--accent);height:22px;}
+  .sel{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;
+    color:var(--txt);padding:11px 12px;font-size:14px;}
+  .rule{border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px;background:var(--panel-2);}
+  .rule.fired{border-color:rgba(255,93,93,.5);background:linear-gradient(180deg,rgba(255,93,93,.09),transparent);}
+  .rule-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+  .rule-h b{font-size:13.5px;font-weight:650;}
+  .cond{display:flex;gap:6px;align-items:center;margin-top:7px;flex-wrap:wrap;}
+  .cond select,.cond input{background:var(--panel-3);border:1px solid var(--line);border-radius:9px;
+    color:var(--txt);padding:7px 9px;font-size:12.5px;}
+  .cond input{width:84px;}
+  .cond .rm{color:var(--txt-3);padding:2px 7px;font-size:15px;}
+  .cond .rm:hover{color:var(--hot);}
+  .tag{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;letter-spacing:.03em;}
+  .tag-fired{background:rgba(255,93,93,.18);color:#ff9d9d;}
+  .tag-clear{background:var(--panel-3);color:var(--txt-3);}
+  .tag-live{background:rgba(255,196,77,.16);color:#ffd682;}
+
+  @media(max-width:1000px){
+    .crisis-grid,.sim-grid,.ix-cols{grid-template-columns:minmax(0,1fr);}
+  }
+  @media(max-width:560px){
+    .tabs button{padding:10px 12px;font-size:12.5px;}
+    .ix-row .lbl{width:80px;font-size:11.5px;}
+  }
+
   /* ---------- passcode gate ---------- */
   .gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:20px;}
   .gate[hidden]{display:none;}
@@ -317,6 +393,15 @@
 
   <!-- ══ live watch items ══ -->
   <div class="alerts" id="alerts"></div>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button data-view="overview" class="on" role="tab">Overview</button>
+    <button data-view="crisis" role="tab">Crisis watch <span class="badge" id="crisisBadge" hidden>0</span></button>
+    <button data-view="synth" role="tab">Synthesis</button>
+    <button data-view="sim" role="tab">Simulator</button>
+  </nav>
+
+<section class="view on" id="v-overview" role="tabpanel">
 
   <!-- ══ ENSO state ══ -->
   <div class="sec-title">
@@ -412,6 +497,109 @@
       </section>
     </aside>
   </div>
+
+</section><!-- /overview -->
+
+<!-- ══════════════ crisis watch ══════════════ -->
+<section class="view" id="v-crisis" role="tabpanel">
+  <div class="sec-title">
+    <h2>Crisis watch</h2>
+    <span class="note">Observed events — fires, floods, storms, drought — in and around the areas you track</span>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="row wrap-w" style="gap:8px">
+      <div class="grow" style="min-width:200px">
+        <div class="h">Filter</div>
+        <div class="row wrap-w" style="gap:6px;margin-top:8px" id="crisisFilters">
+          <button class="chip-btn on" data-cf="all">All</button>
+          <button class="chip-btn" data-cf="wildfires">Fire</button>
+          <button class="chip-btn" data-cf="floods">Flood</button>
+          <button class="chip-btn" data-cf="severeStorms">Storm</button>
+          <button class="chip-btn" data-cf="drought">Drought</button>
+          <button class="chip-btn" data-cf="other">Other</button>
+        </div>
+      </div>
+      <button class="btn" id="crisisReload">Reload feeds</button>
+    </div>
+    <p class="xs dim" style="margin-top:14px;line-height:1.55">
+      These are <b>observed events</b>, not attributions. ENSO shifts the odds of fire, flood and drought in
+      these regions over a season; it does not cause any single event, and neither feed below claims it does.
+      Sources: <a href="https://eonet.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA EONET</a> (satellite-tracked
+      natural events) and <a href="https://reliefweb.int/disasters" target="_blank" rel="noopener">ReliefWeb</a>
+      (UN OCHA disaster records). Use official national sources for anything operational.
+    </p>
+  </div>
+
+  <div class="crisis-grid">
+    <section class="card pad-0">
+      <div style="padding:16px 16px 0"><div class="h">Near your locations</div>
+        <div class="xs dim" id="crisisNearNote">within 1,200 km of a tracked place</div></div>
+      <div id="crisisNear"></div>
+    </section>
+    <section class="card pad-0">
+      <div style="padding:16px 16px 0"><div class="h">Wider ENSO-sensitive regions</div>
+        <div class="xs dim">everything else the feeds are reporting</div></div>
+      <div id="crisisFar"></div>
+    </section>
+  </div>
+</section>
+
+<!-- ══════════════ synthesis ══════════════ -->
+<section class="view" id="v-synth" role="tabpanel">
+  <div class="sec-title">
+    <h2>Synthesis</h2>
+    <span class="note">Live variables combined into risk indices, with every factor shown</span>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <p class="xs dim" style="line-height:1.6">
+      This is a <b>transparent heuristic, not a validated forecast model</b>. It combines the live variables
+      below — temperature against normal, rainfall against normal, humidity, wind, and the ENSO phase weighted
+      by each region's real teleconnection strength — into 0–100 indices. Every contributing term is listed so
+      you can see exactly why a number moved, and disagree with it. Regions where ENSO is a weak predictor
+      (Lebanon, Türkiye) get a correspondingly small ENSO term by design.
+    </p>
+  </div>
+  <div id="synthList"></div>
+</section>
+
+<!-- ══════════════ simulator ══════════════ -->
+<section class="view" id="v-sim" role="tabpanel">
+  <div class="sec-title">
+    <h2>Simulator</h2>
+    <span class="note">Set the variables, see what it would mean, and define the criteria that trip an alarm</span>
+  </div>
+
+  <div class="sim-grid">
+    <section class="card">
+      <div class="row wrap-w" style="margin-bottom:6px">
+        <div class="h grow">Variables</div>
+        <button class="chip-btn" data-preset="live">Load live</button>
+        <button class="chip-btn" data-preset="elnino">Strong El Niño</button>
+        <button class="chip-btn" data-preset="lanina">Strong La Niña</button>
+        <button class="chip-btn" data-preset="reset">Reset</button>
+      </div>
+      <div id="simVars"></div>
+      <label class="fld" style="margin-top:16px"><span>Apply to</span>
+        <select id="simRegion" class="sel"></select></label>
+    </section>
+
+    <section class="card">
+      <div class="h" style="margin-bottom:4px">Projected outcome</div>
+      <div class="xs dim" id="simPhase">—</div>
+      <div id="simOut" style="margin-top:14px"></div>
+    </section>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="row wrap-w" style="margin-bottom:12px">
+      <div class="grow"><div class="h">Criteria</div>
+        <div class="xs dim">Rules you define. Each is checked against the simulated values and, separately, against live conditions right now.</div></div>
+      <button class="btn" id="addRule">+ Add criterion</button>
+    </div>
+    <div id="ruleList"></div>
+  </div>
+</section>
 
   <p class="xs dim" style="margin:26px 2px 0;line-height:1.6">
     Weather and climate data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
@@ -743,6 +931,13 @@ const state = {
   enso: null,                             // { anom, anom90, trend, sst, series:[{d,a}] , source }
   fetchedAt: null,
   error: null,
+
+  view: store.get('view') || 'overview',
+  crisis: null,                           // { items, errors, at }
+  crisisFilter: 'all',
+  sim: store.get('sim') || null,          // filled from SIM_VARS defaults on boot
+  simRegion: store.get('simRegion') || 'all',
+  rules: store.get('rules') || null,      // filled from DEFAULT_RULES on boot
 };
 
 const T = c => state.unit === 'f' ? c * 9 / 5 + 32 : c;      // absolute temperature
@@ -777,8 +972,14 @@ const FC_CUR = ['temperature_2m','relative_humidity_2m','apparent_temperature','
   'weather_code','cloud_cover','surface_pressure','wind_speed_10m','wind_direction_10m','wind_gusts_10m'].join(',');
 const FC_HOURLY = ['temperature_2m','precipitation_probability','precipitation','visibility','uv_index',
   'wind_speed_10m','relative_humidity_2m'].join(',');
-const FC_DAILY = ['weather_code','temperature_2m_max','temperature_2m_min','sunrise','sunset','uv_index_max',
-  'precipitation_sum','precipitation_probability_max','wind_speed_10m_max'].join(',');
+const FC_DAILY = ['weather_code','temperature_2m_max','temperature_2m_min','apparent_temperature_max',
+  'sunrise','sunset','uv_index_max','precipitation_sum','precipitation_probability_max',
+  'wind_speed_10m_max'].join(',');
+
+/* Heat stress is a feels-like question, so prefer apparent temperature and fall
+   back to air temperature only if the API did not return it. */
+const appMax = (d, i) => (d.apparent_temperature_max && num(d.apparent_temperature_max[i]))
+  ? d.apparent_temperature_max[i] : d.temperature_2m_max[i];
 
 async function loadForecasts() {
   const pts = allPoints();
@@ -987,7 +1188,7 @@ function buildAlerts() {
     const nm = loc.name;
     const d = s.daily;
 
-    const maxApp = Math.max(...d.temperature_2m_max);
+    const maxApp = Math.max(...d.time.map((_, i) => appMax(d, i)));
     if (maxApp >= 42) push(3, `${nm}: extreme heat`,
       `Peaks at ${fx(T(maxApp), 0)}${U()} this week — outdoor work and travel windows need managing.`);
     else if (maxApp >= 38) push(2, `${nm}: high heat`,
@@ -1129,6 +1330,20 @@ function render() {
   renderSpots();
   renderRail();
   renderDetail();
+  renderCrisis();
+  if (state.view === 'synth') renderSynth();
+  if ($('#simVars').children.length) { renderSimOut(); updateRuleTags(); }
+}
+
+function setView(v) {
+  state.view = v;
+  store.set('view', v);
+  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  $$('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  /* charts measure their box, so they must be drawn while visible */
+  if (v === 'synth') renderSynth();
+  if (v === 'overview') { renderRail(); renderDetail(); }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderStamp() {
@@ -1467,6 +1682,514 @@ function compass(deg) {
     [Math.round(deg / 22.5) % 16];
 }
 
+/* ═══════════════ risk model ═══════════════════════════════════════════════
+   A transparent heuristic, deliberately not a black box: every term it adds is
+   reported back to the UI so the number can be argued with. The ENSO term is
+   scaled by each region's real teleconnection strength AND its confidence, so
+   a weak-signal region like Lebanon gets a near-zero ENSO push by construction
+   rather than by disclaimer.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+const ENSO_FX = {
+  /* dry: +1 means El Niño pushes this region toward drought. conf scales it. */
+  gulf:      { dry: -0.35, heat: 0.10, conf: 0.55 },
+  indonesia: { dry:  1.00, heat: 0.55, conf: 1.00 },
+  thailand:  { dry:  0.95, heat: 0.60, conf: 1.00 },
+  levant:    { dry: -0.15, heat: 0.05, conf: 0.25 },
+  turkey:    { dry: -0.20, heat: 0.05, conf: 0.30 },
+  generic:   { dry:  0.00, heat: 0.00, conf: 0.20 },
+};
+
+const SIM_VARS = [
+  { k:'oni',      label:'Niño 3.4 anomaly',      unit:'°C',           min:-3,  max:3,   step:.1, def:0   },
+  { k:'tAnom',    label:'Temperature vs normal', unit:'°C',           min:-5,  max:8,   step:.1, def:0   },
+  { k:'rainPct',  label:'Rainfall',              unit:'% of normal',  min:0,   max:300, step:5,  def:100 },
+  { k:'peakRain', label:'Peak daily rain',       unit:'mm',           min:0,   max:200, step:5,  def:5   },
+  { k:'humidity', label:'Humidity',              unit:'%',            min:5,   max:100, step:1,  def:55  },
+  { k:'wind',     label:'Peak wind',             unit:'km/h',         min:0,   max:120, step:1,  def:20  },
+  { k:'maxApp',   label:'Peak feels-like',       unit:'°C',           min:-10, max:55,  step:.5, def:33  },
+  { k:'horizon',  label:'Horizon',               unit:'months ahead', min:1,   max:12,  step:1,  def:3   },
+];
+
+const IX_META = [
+  { k:'drought',    label:'Drought',    color:'#ffc44d' },
+  { k:'flood',      label:'Flood',      color:'#4c9bff' },
+  { k:'heat',       label:'Heat',       color:'#ff5d5d' },
+  { k:'fire',       label:'Fire & haze',color:'#ff8a4c' },
+  { k:'disruption', label:'Disruption', color:'#c9d2df' },
+];
+
+function computeIndices(region, v) {
+  const fx = ENSO_FX[region] || ENSO_FX.generic;
+  const oni = clamp(v.oni || 0, -3, 3);
+  /* ENSO teleconnections are seasonal, so a longer horizon lets the signal
+     accumulate relative to this week's weather noise. */
+  const hz = v.horizon ? clamp(v.horizon / 6, .4, 1.4) : 1;
+  const dryPush  = oni * fx.dry * fx.conf * 12 * hz;
+  const heatPush = Math.abs(oni) * fx.heat * fx.conf * 5 * hz * (oni > 0 ? 1 : .3);
+
+  const rainPct = clamp(v.rainPct ?? 100, 0, 300);
+  const terms = {
+    drought: [
+      ['rainfall shortfall', (100 - rainPct) * .75],
+      ['temperature anomaly', (v.tAnom || 0) * 4],
+      ['ENSO phase', dryPush],
+    ],
+    flood: [
+      ['peak daily rain', (v.peakRain || 0) / 60 * 70],
+      ['weekly rain vs normal', (rainPct - 100) / 200 * 35],
+      ['ENSO phase', -dryPush * .6],
+    ],
+    heat: [
+      ['peak feels-like', ((v.maxApp ?? 30) - 30) / 15 * 100],
+      ['temperature anomaly', (v.tAnom || 0) * 5],
+      ['ENSO phase', heatPush],
+    ],
+  };
+  const sum = a => a.reduce((t, [, x]) => t + x, 0);
+  const drought = clamp(sum(terms.drought), 0, 100);
+  const flood   = clamp(sum(terms.flood), 0, 100);
+  const heat    = clamp(sum(terms.heat), 0, 100);
+
+  terms.fire = [
+    ['dryness', .42 * drought],
+    ['heat', .22 * heat],
+    ['low humidity', .22 * (100 - clamp(v.humidity ?? 55, 0, 100))],
+    ['wind', .14 * clamp((v.wind || 0) / 60 * 100, 0, 100)],
+  ];
+  const fire = clamp(sum(terms.fire), 0, 100);
+
+  const worst = Math.max(heat, flood, drought, fire);
+  const mean = (heat + flood + drought + fire) / 4;
+  terms.disruption = [['worst single risk', worst * .6], ['breadth of risk', mean * .4]];
+  const disruption = clamp(worst * .6 + mean * .4, 0, 100);
+
+  return { drought, flood, heat, fire, disruption, terms, dryPush, heatPush };
+}
+
+/* Pull the model's inputs straight off the live forecast, so the simulator and
+   the live synthesis run through exactly the same code path. */
+function liveVars(loc) {
+  const s = summarize(loc);
+  if (!s) return null;
+  const d = s.daily, h = s.f.hourly;
+  let hum = s.cur.relative_humidity_2m;
+  if (h && h.relative_humidity_2m) {
+    const slice = h.relative_humidity_2m.slice(s.hourIdx, s.hourIdx + 168).filter(num);
+    if (slice.length) hum = slice.reduce((a, b) => a + b, 0) / slice.length;
+  }
+  return {
+    oni: headlineAnom() ?? 0,
+    tAnom: s.tAnom ?? 0,
+    rainPct: num(s.pPct) && s.pPct < 999 ? s.pPct : 100,
+    peakRain: Math.max(0, ...d.precipitation_sum),
+    humidity: hum,
+    wind: Math.max(0, ...(d.wind_speed_10m_max || [0])),
+    maxApp: Math.max(...d.time.map((_, i) => appMax(d, i))),
+    horizon: 0,
+    _hasNormals: num(s.tAnom),
+  };
+}
+
+/* Day-by-day disruption over the forecast week. */
+function trajectory(loc) {
+  const s = summarize(loc);
+  if (!s) return [];
+  const d = s.daily, h = s.f.hourly, n = state.norm[keyOf(loc)];
+  const base = liveVars(loc);
+  return d.time.map((t, i) => {
+    const doy = doyOf(t);
+    const mean = (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2;
+    let hum = base.humidity;
+    if (h && h.relative_humidity_2m) {
+      const slice = h.relative_humidity_2m.slice(i * 24, i * 24 + 24).filter(num);
+      if (slice.length) hum = slice.reduce((a, b) => a + b, 0) / slice.length;
+    }
+    const pNorm = n && num(n.p[doy]) ? n.p[doy] : null;
+    const v = {
+      oni: base.oni,
+      tAnom: n && num(n.t[doy]) ? mean - n.t[doy] : 0,
+      rainPct: pNorm && pNorm > 0.3 ? (d.precipitation_sum[i] / pNorm) * 100 : 100,
+      peakRain: d.precipitation_sum[i] || 0,
+      humidity: hum,
+      wind: (d.wind_speed_10m_max || [])[i] || 0,
+      maxApp: appMax(d, i),
+      horizon: 0,
+    };
+    return { t, y: computeIndices(loc.region, v).disruption };
+  });
+}
+
+function synthText(loc, ix, v) {
+  const L = LENS[loc.region] || LENS.generic;
+  const ranked = IX_META.filter(m => m.k !== 'disruption')
+    .map(m => ({ ...m, val: ix[m.k] })).sort((a, b) => b.val - a.val);
+  const top = ranked[0], second = ranked[1];
+  const level = x => x >= 70 ? 'high' : x >= 45 ? 'elevated' : x >= 25 ? 'moderate' : 'low';
+  const out = [];
+
+  out.push(`Overall disruption reads ${Math.round(ix.disruption)} / 100 — ${level(ix.disruption)}. `
+    + `The dominant driver is ${top.label.toLowerCase()} at ${Math.round(top.val)}`
+    + (second.val >= 40 ? `, with ${second.label.toLowerCase()} also ${level(second.val)} at ${Math.round(second.val)}.` : '.'));
+
+  if (v._hasNormals === false)
+    out.push('Local climate normals have not finished downloading, so the anomaly terms are still zero — these numbers will firm up shortly.');
+  else
+    out.push(`This week runs ${signed(v.tAnom)} °C against the local normal, with rainfall at `
+      + `${Math.round(v.rainPct)}% of what this week usually brings.`);
+
+  const push = ix.dryPush;
+  if (Math.abs(push) < 1.5)
+    out.push(`ENSO is contributing almost nothing here (${signed(push, 1)} points) — either the phase is near neutral or, as in ${L.title}, the teleconnection is too weak to lean on.`);
+  else
+    out.push(`The current ENSO phase adds ${signed(push, 1)} points to the drought side of the model, reflecting ${L.title}'s ${push > 0 ? 'drying' : 'wetting'} tendency in this phase.`);
+
+  return out.join(' ');
+}
+
+/* ═══════════════ crisis feeds ═══════════════ */
+
+const CAT_MAP = {
+  wildfires:{ label:'Fire', cls:'ev-fire', ico:'🔥' },
+  floods:{ label:'Flood', cls:'ev-flood', ico:'🌊' },
+  severeStorms:{ label:'Storm', cls:'ev-storm', ico:'🌀' },
+  drought:{ label:'Drought', cls:'ev-drought', ico:'🌵' },
+  dustHaze:{ label:'Dust & haze', cls:'ev-other', ico:'🌫' },
+  temperatureExtremes:{ label:'Heat', cls:'ev-fire', ico:'🌡' },
+  landslides:{ label:'Landslide', cls:'ev-other', ico:'⛰' },
+  other:{ label:'Event', cls:'ev-other', ico:'⚠' },
+};
+const KEEP_CATS = ['wildfires','floods','severeStorms','drought','dustHaze','temperatureExtremes','landslides'];
+
+function haversine(a, b, c, d) {
+  const R = 6371, r = Math.PI / 180;
+  const dLat = (c - a) * r, dLon = (d - b) * r;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function nearestTracked(lat, lon) {
+  let best = null;
+  for (const l of [...SPOTLIGHTS, ...state.watch]) {
+    const km = haversine(lat, lon, l.lat, l.lon);
+    if (!best || km < best.km) best = { km, name: l.name };
+  }
+  return best;
+}
+
+function rwCategory(typeName) {
+  const t = (typeName || '').toLowerCase();
+  if (t.includes('flood') || t.includes('flash')) return 'floods';
+  if (t.includes('fire')) return 'wildfires';
+  if (t.includes('drought')) return 'drought';
+  if (t.includes('cyclone') || t.includes('storm') || t.includes('typhoon') || t.includes('hurricane')) return 'severeStorms';
+  if (t.includes('land slide') || t.includes('landslide') || t.includes('mud')) return 'landslides';
+  if (t.includes('heat') || t.includes('wave')) return 'temperatureExtremes';
+  return 'other';
+}
+
+const TRACKED_COUNTRIES = ['emirates','indonesia','thailand','lebanon','türkiye','turkey'];
+
+async function loadCrisis() {
+  const items = [], errors = [];
+
+  const eonet = fetchJSON('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=45&limit=200',
+    { retries: 1, timeout: 20000 })
+    .then(r => {
+      for (const e of (r.events || [])) {
+        const cat = ((e.categories || [])[0] || {}).id || 'other';
+        if (!KEEP_CATS.includes(cat)) continue;
+        const g = (e.geometry || [])[e.geometry.length - 1];
+        let lat = null, lon = null, when = g && g.date;
+        if (g && g.coordinates) {
+          if (g.type === 'Point') { lon = g.coordinates[0]; lat = g.coordinates[1]; }
+          else {
+            const ring = (g.coordinates[0] || []).filter(p => Array.isArray(p) && p.length >= 2);
+            if (ring.length) {
+              lon = ring.reduce((t, p) => t + p[0], 0) / ring.length;
+              lat = ring.reduce((t, p) => t + p[1], 0) / ring.length;
+            }
+          }
+        }
+        if (!num(lat) || !num(lon)) continue;
+        const near = nearestTracked(lat, lon);
+        items.push({ src: 'EONET', cat, title: e.title, when, lat, lon,
+          url: (e.sources || [])[0]?.url || e.link, km: near ? near.km : null,
+          nearName: near ? near.name : null, place: null });
+      }
+    })
+    .catch(e => errors.push('NASA EONET: ' + (e.message || 'unreachable')));
+
+  const relief = fetchJSON('https://api.reliefweb.int/v1/disasters?appname=el-nino-watch'
+      + '&profile=list&limit=40&sort%5B%5D=date%3Adesc', { retries: 1, timeout: 20000 })
+    .then(r => {
+      for (const d of (r.data || [])) {
+        const f = d.fields || {};
+        const type = ((f.type || [])[0] || {}).name || '';
+        const countries = (f.country || []).map(c => c.name).filter(Boolean);
+        const cat = rwCategory(type + ' ' + (f.name || ''));
+        if (cat === 'other' && !type) continue;
+        const match = countries.some(c => TRACKED_COUNTRIES.some(t => c.toLowerCase().includes(t)));
+        items.push({ src: 'ReliefWeb', cat, title: f.name || type, place: countries.join(', '),
+          when: (f.date || {}).created || (f.date || {}).changed, url: f.url,
+          km: match ? 0 : null, nearName: match ? countries[0] : null });
+      }
+    })
+    .catch(e => errors.push('ReliefWeb: ' + (e.message || 'unreachable')));
+
+  await Promise.all([eonet, relief]);
+  items.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
+  state.crisis = { items, errors, at: Date.now() };
+  store.set('crisis', state.crisis);
+}
+
+function renderCrisis() {
+  const c = state.crisis;
+  const near = $('#crisisNear'), far = $('#crisisFar');
+  if (!c) { near.innerHTML = '<div class="empty">Loading event feeds…</div>'; far.innerHTML = ''; return; }
+
+  const f = state.crisisFilter || 'all';
+  const pass = it => f === 'all' ? true
+    : f === 'other' ? !['wildfires','floods','severeStorms','drought'].includes(it.cat)
+    : it.cat === f;
+
+  const list = c.items.filter(pass);
+  const isNear = it => num(it.km) && it.km <= 1200;
+  const a = list.filter(isNear).slice(0, 40);
+  const b = list.filter(it => !isNear(it)).slice(0, 40);
+
+  $('#crisisBadge').hidden = !a.length;
+  $('#crisisBadge').textContent = a.length;
+
+  const row = it => {
+    const m = CAT_MAP[it.cat] || CAT_MAP.other;
+    const when = it.when ? new Date(it.when).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+    const where = it.place || (num(it.km) && it.km > 0 ? `${Math.round(it.km)} km from ${it.nearName}` : it.nearName || '');
+    return `<div class="ev">
+      <div class="ev-ico ${m.cls}">${m.ico}</div>
+      <div class="grow" style="min-width:0">
+        <b>${esc(it.title)}</b>
+        <div class="meta"><span>${esc(m.label)}</span>${where ? `<span>${esc(where)}</span>` : ''}
+          ${when ? `<span>${esc(when)}</span>` : ''}<span>${esc(it.src)}</span></div>
+      </div>
+      ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">open</a>` : ''}
+    </div>`;
+  };
+
+  const errNote = c.errors.length
+    ? `<div class="ev"><div class="ev-ico ev-other">⚠</div><div class="grow"><b>Some feeds did not respond</b>
+       <div class="meta"><span>${esc(c.errors.join(' · '))}</span></div></div></div>` : '';
+
+  near.innerHTML = errNote + (a.length ? a.map(row).join('')
+    : '<div class="empty">No matching events near your locations right now.</div>');
+  far.innerHTML = b.length ? b.map(row).join('')
+    : '<div class="empty">Nothing else matching that filter.</div>';
+}
+
+/* ═══════════════ synthesis view ═══════════════ */
+
+function ixBars(ix) {
+  return IX_META.map(m => `<div class="ix-row">
+    <span class="lbl">${esc(m.label)}</span>
+    <span class="ix-bar"><i style="width:${ix[m.k].toFixed(0)}%;background:${m.color}"></i></span>
+    <span class="ix-val">${Math.round(ix[m.k])}</span></div>`).join('');
+}
+
+function renderSynth() {
+  const locs = [...SPOTLIGHTS];
+  const sel = locById(state.selected);
+  if (!SPOTLIGHTS.some(s => s.id === sel.id)) locs.unshift(sel);
+
+  $('#synthList').innerHTML = locs.map(loc => {
+    const v = liveVars(loc);
+    if (!v) return `<section class="card synth"><div class="h">${esc(loc.name)}</div>
+      <div class="empty">Waiting for live data…</div></section>`;
+    const ix = computeIndices(loc.region, v);
+    /* Terms are shown before clamping, with the clamped result after the arrow —
+       so a wildly negative term and a floor of 0 both stay visible. */
+    const termRows = Object.entries(ix.terms).map(([kk, arr]) =>
+      `<div class="t"><span>${esc(kk)}</span><b>${arr.map(([n2, x]) =>
+        `${esc(n2)} ${signed(x, 1)}`).join(' · ')} → ${Math.round(ix[kk])}</b></div>`).join('');
+    return `<section class="card synth">
+      <div class="row wrap-w" style="margin-bottom:10px">
+        <div class="grow"><div class="h">${esc(loc.name)}${loc.country ? ' · ' + esc(loc.country) : ''}</div>
+          <div class="xs dim">live variables, this week</div></div>
+        <span class="chip ${ix.disruption >= 70 ? 'hot' : ix.disruption >= 45 ? 'warm' : ''}">
+          disruption ${Math.round(ix.disruption)}</span>
+      </div>
+      <div class="ix-cols">
+        <div>${ixBars(ix)}
+          <div class="chart-wrap" style="height:150px;min-height:150px;margin-top:12px"
+               id="traj-${esc(loc.id)}"></div></div>
+        <div>
+          <p class="sm muted" style="line-height:1.6">${esc(synthText(loc, ix, v))}</p>
+          <div class="h" style="margin:14px 0 4px">How it was built</div>
+          <div class="terms">${termRows}</div>
+        </div>
+      </div>
+    </section>`;
+  }).join('');
+
+  for (const loc of locs) {
+    const el = $('#traj-' + loc.id);
+    if (!el) continue;
+    const tr = trajectory(loc);
+    if (!tr.length) { el.innerHTML = '<div class="empty">No trajectory</div>'; continue; }
+    lineChart(el, tr.map(x => ({ y: x.y })), {
+      color: '#c9d2df', gid: 'tj' + loc.id, min: 0, max: 100,
+      fmt: v2 => String(Math.round(v2)),
+      labels: tr.map((x, i) => ({ i, text: i === 0 ? 'Today' : dayName(x.t, null) })),
+    });
+  }
+}
+
+/* ═══════════════ simulator ═══════════════ */
+
+const DEFAULT_RULES = [
+  { id:'r1', name:'Indonesia drought watch', region:'indonesia',
+    conds:[{k:'oni',op:'>=',v:1},{k:'rainPct',op:'<=',v:70}] },
+  { id:'r2', name:'Thai water stress', region:'thailand',
+    conds:[{k:'oni',op:'>=',v:0.5},{k:'rainPct',op:'<=',v:60},{k:'tAnom',op:'>=',v:1}] },
+  { id:'r3', name:'Gulf flash-flood risk', region:'gulf',
+    conds:[{k:'peakRain',op:'>=',v:40}] },
+  { id:'r4', name:'Severe disruption anywhere', region:'any',
+    conds:[{k:'disruption',op:'>=',v:70}] },
+];
+
+const RULE_VARS = [
+  ...SIM_VARS.filter(v => v.k !== 'horizon').map(v => ({ k:v.k, label:v.label, unit:v.unit })),
+  ...IX_META.map(m => ({ k:m.k, label:m.label + ' index', unit:'0–100' })),
+];
+
+function simRegions() {
+  return state.simRegion === 'all' ? SPOTLIGHTS : SPOTLIGHTS.filter(s => s.region === state.simRegion);
+}
+
+function buildSimVars() {
+  $('#simVars').innerHTML = SIM_VARS.map(v => `<div class="sv">
+    <div class="sv-top"><span>${esc(v.label)}</span><b id="svv-${v.k}">${state.sim[v.k]}<small class="dim"> ${esc(v.unit)}</small></b></div>
+    <input type="range" id="sv-${v.k}" min="${v.min}" max="${v.max}" step="${v.step}"
+      value="${state.sim[v.k]}" aria-label="${esc(v.label)}">
+  </div>`).join('');
+
+  SIM_VARS.forEach(v => {
+    $('#sv-' + v.k).addEventListener('input', e => {
+      state.sim[v.k] = parseFloat(e.target.value);
+      store.set('sim', state.sim);
+      $('#svv-' + v.k).innerHTML = `${state.sim[v.k]}<small class="dim"> ${esc(v.unit)}</small>`;
+      renderSimOut(); updateRuleTags();
+    });
+  });
+
+  $('#simRegion').innerHTML = '<option value="all">All spotlight regions</option>'
+    + SPOTLIGHTS.map(s => `<option value="${esc(s.region)}">${esc(s.name)} · ${esc(s.country)}</option>`).join('');
+  $('#simRegion').value = state.simRegion;
+  $('#simRegion').addEventListener('change', e => {
+    state.simRegion = e.target.value; store.set('simRegion', state.simRegion);
+    renderSimOut(); updateRuleTags();
+  });
+}
+
+function syncSimVars() {
+  SIM_VARS.forEach(v => {
+    const el = $('#sv-' + v.k);
+    if (!el) return;
+    el.value = state.sim[v.k];
+    $('#svv-' + v.k).innerHTML = `${state.sim[v.k]}<small class="dim"> ${esc(v.unit)}</small>`;
+  });
+}
+
+function renderSimOut() {
+  const ph = phaseOf(state.sim.oni);
+  $('#simPhase').innerHTML = `Simulated phase: <b style="color:${ph.color}">${esc(ph.name)}</b>`
+    + (ph.strength ? ` · ${esc(ph.strength)}` : '')
+    + ` · ${state.sim.horizon} month${state.sim.horizon === 1 ? '' : 's'} ahead`;
+
+  $('#simOut').innerHTML = simRegions().map(s => {
+    const ix = computeIndices(s.region, state.sim);
+    const L = LENS[s.region];
+    return `<div style="margin-bottom:16px">
+      <div class="row" style="margin-bottom:4px">
+        <div class="grow" style="font-size:13.5px;font-weight:650">${esc(s.name)}</div>
+        <span class="conf conf-${esc(L[ph.key].conf)}">${esc(L[ph.key].conf)} confidence</span>
+      </div>
+      ${ixBars(ix)}
+      <div class="xs dim" style="margin-top:5px">ENSO term ${signed(ix.dryPush, 1)} on drought</div>
+    </div>`;
+  }).join('') || '<div class="empty">No region selected.</div>';
+}
+
+function evalRule(rule, vars, region) {
+  const ix = computeIndices(region, vars);
+  const all = { ...vars, ...ix };
+  return rule.conds.length > 0 && rule.conds.every(c => {
+    const val = all[c.k];
+    if (!num(val)) return false;
+    return c.op === '>=' ? val >= c.v : val <= c.v;
+  });
+}
+
+function ruleStatus(rule) {
+  const regions = rule.region === 'any' ? SPOTLIGHTS : SPOTLIGHTS.filter(s => s.region === rule.region);
+  const simHits = regions.filter(s => evalRule(rule, state.sim, s.region)).map(s => s.name);
+  const liveHits = regions.filter(s => {
+    const v = liveVars(s);
+    return v && evalRule(rule, v, s.region);
+  }).map(s => s.name);
+  return { simHits, liveHits };
+}
+
+function renderRules() {
+  $('#ruleList').innerHTML = state.rules.length ? state.rules.map(r => {
+    const st = ruleStatus(r);
+    return `<div class="rule${st.simHits.length ? ' fired' : ''}" data-rule="${esc(r.id)}">
+      <div class="rule-h">
+        <input class="rule-name" data-rn="${esc(r.id)}" value="${esc(r.name)}"
+          style="background:none;border:none;font-size:13.5px;font-weight:650;color:var(--txt);flex:1;min-width:120px">
+        <select data-rreg="${esc(r.id)}" style="background:var(--panel-3);border:1px solid var(--line);
+          border-radius:9px;color:var(--txt);padding:6px 9px;font-size:12px">
+          <option value="any"${r.region === 'any' ? ' selected' : ''}>Any region</option>
+          ${SPOTLIGHTS.map(s => `<option value="${esc(s.region)}"${r.region === s.region ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}
+        </select>
+        <span class="tag ${st.simHits.length ? 'tag-fired' : 'tag-clear'}" data-tag-sim>
+          ${st.simHits.length ? 'SIM: ' + esc(st.simHits.join(', ')) : 'SIM: clear'}</span>
+        <span class="tag ${st.liveHits.length ? 'tag-live' : 'tag-clear'}" data-tag-live>
+          ${st.liveHits.length ? 'LIVE: ' + esc(st.liveHits.join(', ')) : 'LIVE: clear'}</span>
+        <button class="rm" data-rdel="${esc(r.id)}" title="Delete rule"
+          style="padding:2px 7px;color:var(--txt-3);font-size:15px">×</button>
+      </div>
+      ${r.conds.map((c, i) => `<div class="cond">
+        <select data-rk="${esc(r.id)}:${i}">
+          ${RULE_VARS.map(v => `<option value="${esc(v.k)}"${c.k === v.k ? ' selected' : ''}>${esc(v.label)}</option>`).join('')}
+        </select>
+        <select data-rop="${esc(r.id)}:${i}">
+          <option value=">="${c.op === '>=' ? ' selected' : ''}>at or above</option>
+          <option value="<="${c.op === '<=' ? ' selected' : ''}>at or below</option>
+        </select>
+        <input type="number" step="0.1" data-rv="${esc(r.id)}:${i}" value="${c.v}">
+        <span class="xs dim">${esc((RULE_VARS.find(v => v.k === c.k) || {}).unit || '')}</span>
+        <button class="rm" data-rcdel="${esc(r.id)}:${i}" title="Remove condition">×</button>
+      </div>`).join('')}
+      <button class="chip-btn" data-rcadd="${esc(r.id)}" style="margin-top:9px">+ condition</button>
+    </div>`;
+  }).join('') : '<div class="empty">No criteria yet. Add one to watch for a combination of conditions.</div>';
+}
+
+/* Light pass so dragging a slider does not rebuild the rule editors and steal focus. */
+function updateRuleTags() {
+  for (const r of state.rules) {
+    const el = $(`.rule[data-rule="${r.id}"]`);
+    if (!el) continue;
+    const st = ruleStatus(r);
+    el.classList.toggle('fired', st.simHits.length > 0);
+    const s1 = el.querySelector('[data-tag-sim]'), s2 = el.querySelector('[data-tag-live]');
+    if (s1) { s1.className = 'tag ' + (st.simHits.length ? 'tag-fired' : 'tag-clear');
+      s1.textContent = st.simHits.length ? 'SIM: ' + st.simHits.join(', ') : 'SIM: clear'; }
+    if (s2) { s2.className = 'tag ' + (st.liveHits.length ? 'tag-live' : 'tag-clear');
+      s2.textContent = st.liveHits.length ? 'LIVE: ' + st.liveHits.join(', ') : 'LIVE: clear'; }
+  }
+}
+
 /* ─────────── data orchestration ─────────── */
 
 async function refreshAll({ quiet = false } = {}) {
@@ -1476,6 +2199,7 @@ async function refreshAll({ quiet = false } = {}) {
     await Promise.all([
       loadForecasts(),
       loadEnso().catch(e => { console.warn('ENSO fetch failed:', e); }),
+      loadCrisis().catch(e => { console.warn('crisis feeds failed:', e); }),
     ]);
     state.fetchedAt = Date.now();
     store.set('fetchedAt', state.fetchedAt);
@@ -1595,6 +2319,93 @@ $('#results').addEventListener('click', e => {
   refreshAll({ quiet: true });
 });
 
+/* tabs */
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-view]');
+  if (b) setView(b.dataset.view);
+});
+
+/* crisis controls */
+$('#crisisFilters').addEventListener('click', e => {
+  const b = e.target.closest('[data-cf]');
+  if (!b) return;
+  state.crisisFilter = b.dataset.cf;
+  $$('#crisisFilters .chip-btn').forEach(x => x.classList.toggle('on', x === b));
+  renderCrisis();
+});
+$('#crisisReload').addEventListener('click', async () => {
+  $('#crisisReload').disabled = true;
+  $('#crisisNear').innerHTML = '<div class="empty">Reloading…</div>';
+  await loadCrisis().catch(() => {});
+  $('#crisisReload').disabled = false;
+  renderCrisis();
+});
+
+/* simulator presets */
+document.addEventListener('click', e => {
+  const p = e.target.closest('[data-preset]');
+  if (!p) return;
+  const mode = p.dataset.preset;
+  if (mode === 'reset') SIM_VARS.forEach(v => state.sim[v.k] = v.def);
+  if (mode === 'elnino') Object.assign(state.sim, { oni: 1.8, tAnom: 1.6, rainPct: 55, peakRain: 8, humidity: 42, wind: 25, maxApp: 38, horizon: 6 });
+  if (mode === 'lanina') Object.assign(state.sim, { oni: -1.6, tAnom: -0.6, rainPct: 165, peakRain: 55, humidity: 82, wind: 45, maxApp: 32, horizon: 6 });
+  if (mode === 'live') {
+    const target = state.simRegion === 'all' ? SPOTLIGHTS[0] : SPOTLIGHTS.find(s => s.region === state.simRegion);
+    const v = target && liveVars(target);
+    if (v) {
+      SIM_VARS.forEach(k => { if (num(v[k.k])) state.sim[k.k] = Math.round(v[k.k] * 10) / 10; });
+      state.sim.horizon = 1;
+    }
+  }
+  store.set('sim', state.sim);
+  syncSimVars(); renderSimOut(); updateRuleTags();
+});
+
+/* rule editing */
+$('#addRule').addEventListener('click', () => {
+  state.rules.push({ id: 'r' + Date.now().toString(36), name: 'New criterion',
+    region: 'any', conds: [{ k: 'disruption', op: '>=', v: 60 }] });
+  store.set('rules', state.rules);
+  renderRules();
+});
+
+$('#ruleList').addEventListener('click', e => {
+  const del = e.target.closest('[data-rdel]');
+  const cadd = e.target.closest('[data-rcadd]');
+  const cdel = e.target.closest('[data-rcdel]');
+  if (del) { state.rules = state.rules.filter(r => r.id !== del.dataset.rdel); }
+  else if (cadd) {
+    const r = state.rules.find(x => x.id === cadd.dataset.rcadd);
+    if (r) r.conds.push({ k: 'rainPct', op: '<=', v: 70 });
+  } else if (cdel) {
+    const [id, i] = cdel.dataset.rcdel.split(':');
+    const r = state.rules.find(x => x.id === id);
+    if (r) r.conds.splice(+i, 1);
+  } else return;
+  store.set('rules', state.rules);
+  renderRules();
+});
+
+$('#ruleList').addEventListener('change', e => {
+  const t = e.target;
+  const set = (attr, fn) => {
+    if (!t.dataset[attr]) return false;
+    const [id, i] = t.dataset[attr].split(':');
+    const r = state.rules.find(x => x.id === id);
+    if (r) fn(r, +i);
+    return true;
+  };
+  let touched = false;
+  if (t.dataset.rn)  { const r = state.rules.find(x => x.id === t.dataset.rn); if (r) r.name = t.value; touched = true; }
+  if (t.dataset.rreg){ const r = state.rules.find(x => x.id === t.dataset.rreg); if (r) r.region = t.value; touched = true; }
+  touched = set('rk',  (r, i) => r.conds[i].k = t.value) || touched;
+  touched = set('rop', (r, i) => r.conds[i].op = t.value) || touched;
+  touched = set('rv',  (r, i) => r.conds[i].v = parseFloat(t.value) || 0) || touched;
+  if (!touched) return;
+  store.set('rules', state.rules);
+  if (t.dataset.rn) updateRuleTags(); else renderRules();
+});
+
 /* dialogs */
 $('#about').addEventListener('click', () => $('#aboutDlg').showModal());
 $('#aboutClose').addEventListener('click', () => $('#aboutDlg').close());
@@ -1681,10 +2492,22 @@ function unlock() {
 function boot() {
   $$('[data-unit]').forEach(x => x.classList.toggle('on', x.dataset.unit === state.unit));
 
+  /* fill anything the schema gained since this browser last stored state */
+  if (!state.sim) state.sim = {};
+  SIM_VARS.forEach(v => { if (!num(state.sim[v.k])) state.sim[v.k] = v.def; });
+  if (!Array.isArray(state.rules) || !state.rules.length) state.rules = DEFAULT_RULES.map(r =>
+    ({ ...r, conds: r.conds.map(c => ({ ...c })) }));
+
   const cachedFc = store.get('fc', 3 * 3600e3);
   const cachedEnso = store.get('enso', 24 * 3600e3);
+  const cachedCrisis = store.get('crisis', 6 * 3600e3);
   if (cachedFc) { state.fc = cachedFc; state.fetchedAt = store.get('fetchedAt') || null; }
   if (cachedEnso) state.enso = cachedEnso;
+  if (cachedCrisis) state.crisis = cachedCrisis;
+
+  buildSimVars();
+  renderRules();
+  setView(state.view);
   for (const loc of [...SPOTLIGHTS, ...state.watch]) {
     const c = store.get('norm:' + keyOf(loc), 60 * 864e5);
     if (c) state.norm[keyOf(loc)] = c;
