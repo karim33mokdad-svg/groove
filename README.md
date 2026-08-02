@@ -65,6 +65,31 @@ does not ship it). Every command also works from the typed command line, which
 is the fallback whenever the mic is blocked or recognition is unavailable, and
 the HUD says which of those happened rather than silently doing nothing.
 
+JARVIS is a grounded rules engine, not a language model. It can only say
+things it derives from the live data or from explanations written into the
+page on purpose — so it will not bluff, and it will not improvise beyond that.
+Within those limits it can:
+
+- **Explain** any term or number: `what is the drought index`, `what does ONI
+  mean`, `how does the risk model work`.
+- **Reason** from the real computed values: `why is disruption high in
+  Bangkok` decomposes the actual model terms in order of contribution, naming
+  the underlying figures. Asking why about a composite index recurses into
+  whichever hazard is really driving it.
+- **Remember context.** Ask "how bad is Bali?", then just "why?", then "what
+  about Beirut?", then "what should I do there?" — the subject carries across
+  turns and switches when you name a new one. A fragment it does not
+  understand is *not* silently treated as a follow-up about the last place.
+- **Compare**: `compare Bali and Thailand`, including reporting honestly when
+  two places are effectively level rather than inventing a winner.
+- **Advise**: `what should I do` — the top live hazard plus that region's
+  written playbook and confidence level.
+- **Navigate**: naming a place selects it, switches to the right tab, scrolls
+  it into view and flashes the section.
+
+The reactor also detaches: scroll past the hero and a floating orb follows you,
+opening a console with the full transcript, the mic toggle and a command line.
+
 Commands include: `status`, `alerts`, `crisis`, `help`; `show Bali`,
 `risk in Thailand`, `weather in Dubai`; `open synthesis` / `simulator` /
 `overview`; `simulate strong El Niño`, `set El Niño to 2.5`,

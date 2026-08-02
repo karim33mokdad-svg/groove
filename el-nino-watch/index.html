@@ -471,11 +471,72 @@
   .hud-chips button:hover{color:var(--txt);border-color:var(--accent);}
   .vwarn{font-size:11.5px;color:var(--warn);font-family:var(--mono);margin-top:10px;line-height:1.5;}
 
+  /* transcript */
+  .hud-log{margin-top:12px;max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
+    padding-right:6px;scrollbar-width:thin;}
+  .lg{font-size:13px;line-height:1.55;padding-left:9px;border-left:2px solid var(--line);}
+  .lg span{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
+    color:var(--txt-3);margin-bottom:2px;}
+  .lg-you{border-left-color:var(--txt-3);color:var(--txt-2);}
+  .lg-jarvis{border-left-color:var(--accent);color:var(--txt);}
+  .lg-jarvis span{color:var(--accent);}
+  .lg-sys{border-left-color:transparent;color:var(--txt-3);font-size:12.5px;}
+
+  /* the section JARVIS just navigated to */
+  .flash{animation:flashPulse 1.9s ease-out;}
+  @keyframes flashPulse{
+    0%{box-shadow:0 0 0 0 rgba(63,201,255,.55),0 0 34px rgba(63,201,255,.45);}
+    100%{box-shadow:0 0 0 14px rgba(63,201,255,0),0 0 0 rgba(63,201,255,0);}}
+  h2.flash,#detailTitle.flash{color:var(--accent);text-shadow:0 0 22px rgba(63,201,255,.8);}
+
+  /* ---------- floating dock ---------- */
+  .dock{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;
+    align-items:flex-end;gap:10px;pointer-events:none;}
+  .dock[hidden]{display:none;}
+  .dock>*{pointer-events:auto;}
+  .dock-orb{position:relative;width:74px;height:74px;border-radius:50%;flex:none;
+    background:radial-gradient(circle at 50% 45%,#eafaff,#3fc9ff 44%,#0a5c8a 78%,#04202f);
+    border:1px solid rgba(200,244,255,.75);cursor:pointer;
+    box-shadow:0 0 26px rgba(63,201,255,.6),0 8px 26px rgba(0,0,0,.6);transition:.2s;}
+  .dock-orb:hover{transform:scale(1.06);box-shadow:0 0 40px rgba(63,201,255,.9),0 8px 26px rgba(0,0,0,.6);}
+  .dock-orb canvas{position:absolute;inset:-16px;width:calc(100% + 32px);height:calc(100% + 32px);}
+  .dock-orb span{position:relative;z-index:2;font-family:var(--mono);font-weight:800;font-size:19px;
+    color:#02202f;text-shadow:0 1px 0 rgba(255,255,255,.4);}
+  .dock-orb.live{animation:corePulse 1.5s ease-in-out infinite;}
+  .dock-panel{width:min(380px,calc(100vw - 36px));background:rgba(5,17,28,.96);
+    border:1px solid var(--line);border-radius:2px;backdrop-filter:blur(8px);
+    box-shadow:0 0 0 1px rgba(63,201,255,.08),0 18px 50px rgba(0,0,0,.7);padding:12px;
+    background-image:
+      linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent)),
+      linear-gradient(var(--accent),var(--accent)),linear-gradient(var(--accent),var(--accent));
+    background-size:13px 1px,1px 13px,13px 1px,1px 13px;
+    background-position:0 0,0 0,100% 100%,100% 100%;background-repeat:no-repeat;}
+  .dock-panel[hidden]{display:none;}
+  .dock-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .dock-head b{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--txt);flex:1;}
+  .dock-st{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--txt-3);
+    text-transform:uppercase;}
+  .dock-head button{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--txt-3);
+    border:1px solid var(--line);padding:4px 8px;border-radius:2px;}
+  .dock-head button:hover{color:var(--txt);border-color:var(--accent);}
+  .dock-head button.on{color:var(--good);border-color:var(--good);}
+  #dockClose{padding:4px 9px;font-size:14px;line-height:1;}
+  .dock-panel .hud-log{max-height:230px;margin-top:4px;}
+  .dock-panel .hud-line{font-size:12px;margin-top:6px;}
+  #dockForm{display:flex;gap:6px;margin-top:10px;}
+  #dockForm input{flex:1;background:rgba(9,24,38,.9);border:1px solid var(--line);color:var(--txt);
+    padding:9px 11px;font-size:13px;font-family:var(--mono);border-radius:2px;}
+  #dockForm button{background:rgba(63,201,255,.16);border:1px solid var(--accent);color:var(--txt);
+    padding:9px 13px;border-radius:2px;}
+
   @media(max-width:900px){
     .hud{grid-template-columns:minmax(0,1fr);gap:12px;padding:14px;}
     .reactor{width:212px;height:212px;}
     .core{width:86px;height:86px;}
     .hud-title{font-size:16px;}
+    .dock{right:12px;bottom:12px;left:12px;align-items:flex-end;}
+    .dock-panel{width:100%;}
+    .dock-orb{width:64px;height:64px;}
   }
 
   /* ---------- passcode gate ---------- */
@@ -560,18 +621,20 @@
     <div>
       <div class="hud-title">J.A.R.V.I.S<span>El Niño watch · voice command interface</span></div>
       <div class="hud-status" id="vStatus"><i></i><span>STANDBY</span></div>
+      <div class="hud-log" id="vLog"></div>
       <div class="hud-line" id="vHeard">—</div>
-      <div class="hud-reply" id="vReply">Tap the core and say “status” for a briefing, or “help” for the command list.</div>
       <form id="cmdForm">
-        <input id="cmdInput" placeholder="…or type a command" autocomplete="off" aria-label="Type a command">
+        <input id="cmdInput" placeholder="Ask me anything — “why is Bali high?”" autocomplete="off" aria-label="Ask JARVIS">
         <button type="submit">RUN</button>
       </form>
       <div class="hud-chips" id="vChips">
         <button data-cmd="status">Status</button>
-        <button data-cmd="show bali">Show Bali</button>
-        <button data-cmd="risk in thailand">Risk · Thailand</button>
+        <button data-cmd="how bad is bali">How bad is Bali</button>
+        <button data-cmd="why">Why?</button>
+        <button data-cmd="what should i do">What should I do</button>
+        <button data-cmd="what is the drought index">Explain drought index</button>
+        <button data-cmd="compare bali and thailand">Compare</button>
         <button data-cmd="crisis">Crisis</button>
-        <button data-cmd="simulate strong el nino">Simulate El Niño</button>
         <button data-cmd="help">Help</button>
         <button data-cmd="mute" id="ttsBtn">Voice reply: on</button>
       </div>
@@ -795,6 +858,28 @@
     stated confidence — they are not forecasts. Always pair the low-confidence regions with the local
     national met service before acting.
   </p>
+</div>
+
+<!-- ══ floating JARVIS dock — follows the scroll ══ -->
+<div class="dock" id="dock" hidden>
+  <div class="dock-panel" id="dockPanel" hidden>
+    <div class="dock-head">
+      <b>J.A.R.V.I.S</b>
+      <span class="dock-st" id="dockStatus">standby</span>
+      <button id="dockMic" title="Toggle voice">MIC</button>
+      <button id="dockClose" title="Close" aria-label="Close">×</button>
+    </div>
+    <div class="hud-log" id="dockLog"></div>
+    <div class="hud-line" id="dockHeard">—</div>
+    <form id="dockForm">
+      <input id="dockInput" placeholder="Ask…" autocomplete="off" aria-label="Ask JARVIS">
+      <button type="submit">▶</button>
+    </form>
+  </div>
+  <button class="dock-orb" id="dockOrb" aria-label="Open JARVIS console">
+    <canvas id="dockViz" aria-hidden="true"></canvas>
+    <span>J</span>
+  </button>
 </div>
 
 <dialog id="aboutDlg">
@@ -2204,7 +2289,7 @@ function renderSynth() {
     const termRows = Object.entries(ix.terms).map(([kk, arr]) =>
       `<div class="t"><span>${esc(kk)}</span><b>${arr.map(([n2, x]) =>
         `${esc(n2)} ${signed(x, 1)}`).join(' · ')} → ${Math.round(ix[kk])}</b></div>`).join('');
-    return `<section class="card synth">
+    return `<section class="card synth" id="synth-${esc(loc.id)}">
       <div class="row wrap-w" style="margin-bottom:10px">
         <div class="grow"><div class="h">${esc(loc.name)}${loc.country ? ' · ' + esc(loc.country) : ''}</div>
           <div class="xs dim">live variables, this week</div></div>
@@ -2679,26 +2764,23 @@ function buildRings() {
 }
 
 /* ---- audio-reactive core ---- */
+function vizCanvases() {
+  return [$('#viz'), $('#dockViz')].filter(c => c && c.offsetParent !== null);
+}
+
 function resizeViz() {
-  const c = $('#viz'); if (!c) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const r = c.getBoundingClientRect();
-  c.width = Math.max(1, Math.round(r.width * dpr));
-  c.height = Math.max(1, Math.round(r.height * dpr));
+  for (const c of [$('#viz'), $('#dockViz')]) {
+    if (!c) continue;
+    const r = c.getBoundingClientRect();
+    if (!r.width) continue;
+    c.width = Math.max(1, Math.round(r.width * dpr));
+    c.height = Math.max(1, Math.round(r.height * dpr));
+  }
 }
 
 function drawViz(ts) {
-  const c = $('#viz');
-  if (!c) return;
-  const g = c.getContext('2d');
-  const W = c.width, H = c.height, cx = W / 2, cy = H / 2;
-  g.clearRect(0, 0, W, H);
-
-  const N = 96;
-  const base = Math.min(W, H) * 0.255;
-  const amp = Math.min(W, H) * 0.085;
   let level = 0;
-
   if (V.analyser) {
     V.analyser.getByteFrequencyData(V.bins);
     let sum = 0;
@@ -2706,6 +2788,18 @@ function drawViz(ts) {
     level = (sum / V.bins.length) / 255;
   }
   V.level += (level - V.level) * 0.18;
+  for (const c of vizCanvases()) paintViz(c, ts);
+  V.raf = requestAnimationFrame(drawViz);
+}
+
+function paintViz(c, ts) {
+  const g = c.getContext('2d');
+  const W = c.width, H = c.height, cx = W / 2, cy = H / 2;
+  g.clearRect(0, 0, W, H);
+
+  const N = 96;
+  const base = Math.min(W, H) * 0.255;
+  const amp = Math.min(W, H) * 0.085;
 
   g.beginPath();
   for (let i = 0; i <= N; i++) {
@@ -2735,8 +2829,6 @@ function drawViz(ts) {
   g.strokeStyle = `rgba(63,201,255,${0.16 + V.level * 0.4})`;
   g.lineWidth = 1 * dpr; g.shadowBlur = 0;
   g.stroke();
-
-  V.raf = requestAnimationFrame(drawViz);
 }
 
 function startViz() {
@@ -2753,6 +2845,12 @@ function setStatus(text, cls) {
   const el = $('#vStatus');
   el.className = 'hud-status' + (cls ? ' ' + cls : '');
   el.querySelector('span').textContent = text;
+  const d = $('#dockStatus');
+  if (d) d.textContent = text.toLowerCase();
+  const dm = $('#dockMic');
+  if (dm) dm.classList.toggle('on', V.listening);
+  const orb = $('#dockOrb');
+  if (orb) orb.classList.toggle('live', V.listening);
 }
 
 function speak(text) {
@@ -2766,7 +2864,8 @@ function speak(text) {
 }
 
 function respond(text) {
-  $('#vReply').textContent = text;
+  if (!text) return;
+  pushLog('jarvis', text);
   speak(text);
 }
 
@@ -2864,6 +2963,283 @@ async function toggleListening() {
   else { setStatus('MIC BLOCKED', 'err'); warn('Speech recognition failed to start. Use the command line below.'); }
 }
 
+/* ═══════════════ knowledge base ═══════════════════════════════════════════
+   Written explanations for everything the dashboard shows. This is a grounded
+   rules engine, not a language model: it can only say things it can derive
+   from the live data or from text written here on purpose. That is the trade —
+   it will never bluff, and it will never improvise beyond this.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+const GLOSSARY = {
+  oni: { term:'the Oceanic Niño Index',
+    text:'The O N I is the official measure of El Niño. NOAA takes sea-surface temperature in the Niño 3.4 box of the equatorial Pacific, subtracts the 30-year normal for that time of year, and averages it over three months. Three months of smoothing is the point: it filters out weather noise so only a genuine shift in the ocean shows. At or above plus zero point five is El Niño, at or below minus zero point five is La Niña, and anything between is neutral. This dashboard estimates it live from model sea-surface temperature, which is why it is labelled indicative — you can pin the official value from C P C and it will take precedence.' },
+  nino34: { term:'the Niño 3.4 region',
+    text:'Niño 3.4 is a box in the central equatorial Pacific, five degrees north to five degrees south, one hundred seventy west to one hundred twenty west. It is the standard box for tracking El Niño because sea temperature there has the strongest and most consistent relationship with global weather patterns. This dashboard samples six points across it.' },
+  anomaly: { term:'an anomaly',
+    text:'An anomaly is a departure from normal, not an absolute value. Thirty degrees means nothing on its own — thirty in Dubai in January is extraordinary, and thirty in Dubai in July is a cool day. So every temperature and rainfall figure here is also expressed against what that exact place normally does on that exact date. That is the number that tells you whether something unusual is happening.' },
+  normal: { term:'a climate normal',
+    text:'The normal is what that location typically does on that calendar date, built here from the ERA5 reanalysis over twenty ten to twenty twenty four, smoothed over a fifteen day window centred on each date. The smoothing stops a single freak year from distorting one day. It is downloaded once per location and cached in your browser for sixty days.' },
+  enso: { term:'ENSO',
+    text:'E N S O is the El Niño Southern Oscillation — the back-and-forth of ocean temperature and atmospheric pressure across the tropical Pacific. In El Niño the warm pool slides east and the Walker circulation weakens, which shifts where the world\'s deep convection sits. That is why a temperature change in the Pacific dries out Indonesia and floods parts of Peru. La Niña is the opposite phase. Neutral is neither.' },
+  teleconnection: { term:'a teleconnection',
+    text:'A teleconnection is a reliable statistical link between conditions in one part of the world and weather in a distant one. Indonesia and Thailand have strong, physically well-understood teleconnections to E N S O. Lebanon and Türkiye barely have one — their winters are governed by the North Atlantic Oscillation and the Mediterranean storm track. This dashboard scales the E N S O contribution by both the strength and the confidence of each region\'s link, so weak-signal places get a near-zero E N S O term by construction rather than by footnote.' },
+  confidence: { term:'the confidence rating',
+    text:'Confidence says how much the E N S O signal is worth leaning on in that region. High means the relationship is strong and consistent across events — Indonesia and Thailand. Moderate means real but noisier — the Gulf. Low means the sample is small, the physical link is weak, or other drivers dominate — Lebanon and Türkiye. Low confidence is not a hedge; it is the finding.' },
+  disruption: { term:'the disruption index',
+    text:'Disruption is the composite. It takes sixty percent from the single worst risk and forty percent from the average of all four, so one severe hazard drives it up but several moderate ones also register. Scale: below twenty five is low, twenty five to forty five moderate, forty five to seventy elevated, above seventy high.' },
+  drought: { term:'the drought index',
+    text:'The drought index combines rainfall shortfall against the local normal, the temperature anomaly, and the E N S O phase weighted by that region\'s teleconnection strength. It runs zero to one hundred. It is a stress indicator for this forecast week, not a hydrological drought classification — real drought is about accumulated deficit over months.' },
+  flood: { term:'the flood index',
+    text:'The flood index is driven mostly by the heaviest single day of rain in the forecast, plus the week\'s total against normal, minus the E N S O drying term. Peak daily rain matters more than weekly total because drainage fails on intensity, not on accumulation.' },
+  heat: { term:'the heat index',
+    text:'The heat index is built from the peak feels-like temperature this week, the temperature anomaly, and an E N S O term. It uses apparent temperature rather than air temperature because heat stress is what humidity does to you, not what the thermometer says.' },
+  fire: { term:'the fire and haze index',
+    text:'Fire risk is a blend: forty two percent from dryness, twenty two percent from heat, twenty two percent from low humidity and fourteen percent from wind. Wind matters because it drives spread, and low humidity because it drives fuel dryness.' },
+  rainpct: { term:'percent of normal rainfall',
+    text:'This compares the coming seven days of forecast rain to what that location normally receives across those same seven calendar dates. One hundred percent is exactly typical. Forty percent means a dry week. Two hundred percent means double. It is far more informative than millimetres, because forty millimetres is a drought in Bali and a flood in Dubai.' },
+  uv: { term:'the UV index',
+    text:'U V index measures sunburn-causing ultraviolet. Below three is low, three to six moderate, six to eight high, eight to eleven very high, and above eleven extreme. Above eight, unprotected skin can burn in under twenty minutes.' },
+  humidity: { term:'humidity',
+    text:'Relative humidity is how close the air is to saturation. Above seventy percent combined with heat above thirty degrees is the dangerous combination, because sweat stops evaporating and the body loses its cooling mechanism. Below twenty five percent, fire and dust risk climb.' },
+  pressure: { term:'atmospheric pressure',
+    text:'Surface pressure around one thousand thirteen hectopascals is average at sea level. Below about one thousand five suggests a low-pressure system and unsettled weather. Above one thousand twenty suggests high pressure — settled, stable, and in summer often hot and stagnant.' },
+  crisis: { term:'the crisis feeds',
+    text:'Two sources. N A S A E O N E T tracks natural events from satellite — wildfires, floods, storms, drought — with coordinates, so I can tell you how far each is from your locations. ReliefWeb is the U N humanitarian record of declared disasters by country. Neither attributes events to El Niño, and neither do I: E N S O shifts the seasonal odds of these event types, it does not cause any individual one.' },
+  simulator: { term:'the simulator',
+    text:'The simulator runs the same risk model as the live view, but on values you set instead of the forecast. Move the sliders and every region recomputes. Your criteria are then checked twice — once against the simulated scenario, once against live conditions right now — so you can see both what would trip and what is already tripping.' },
+  horizon: { term:'the horizon setting',
+    text:'Horizon scales how much weight the E N S O term carries. E N S O teleconnections are seasonal, so over six or twelve months the phase matters more relative to this week\'s weather noise. At one month ahead the E N S O push is damped; at twelve it is amplified.' },
+  model: { term:'how the risk model works',
+    text:'It is a transparent heuristic, not a validated forecast model. I pick up the live variables — temperature against normal, rainfall against normal, humidity, wind, peak rain — apply weights chosen from teleconnection research, and add an E N S O term scaled by each region\'s signal strength and confidence. The weights have not been fitted against outcome data. Every contributing term is printed on the synthesis tab so you can check my arithmetic and disagree with it. Use it to compare scenarios, not to predict outcomes.' },
+};
+
+const GLOSSARY_KEYS = [
+  ['oni', ['oni','o n i','oceanic nino','oceanic niño']],
+  ['nino34', ['nino 3.4','niño 3.4','nino three','nino 34','niño 34']],
+  ['teleconnection', ['teleconnection','teleconnect']],
+  ['confidence', ['confidence','how sure','how reliable','trust']],
+  ['disruption', ['disruption index','disruption','composite']],
+  ['drought', ['drought index','drought']],
+  ['flood', ['flood index','flood']],
+  ['fire', ['fire index','fire and haze','fire','haze']],
+  ['heat', ['heat index','heat stress']],
+  ['rainpct', ['percent of normal','of normal rain','normal rainfall','rain percent']],
+  ['normal', ['normal','climatology','baseline','average for this date']],
+  ['anomaly', ['anomaly','anomalies','vs normal','against normal','departure']],
+  ['enso', ['enso','el nino','el niño','la nina','la niña','southern oscillation']],
+  ['uv', ['uv','ultraviolet']],
+  ['humidity', ['humidity','humid','dew point']],
+  ['pressure', ['pressure','hectopascal','hpa']],
+  ['crisis', ['crisis feed','crisis watch','eonet','reliefweb','where do the events']],
+  ['simulator', ['simulator','simulation']],
+  ['horizon', ['horizon']],
+  ['model', ['risk model','how do you calculate','how is it calculated','how does this work',
+             'how do you work','methodology','how accurate','are you accurate']],
+];
+
+function findGlossary(t) {
+  for (const [k, words] of GLOSSARY_KEYS) if (words.some(w => t.includes(w))) return k;
+  return null;
+}
+
+const METRIC_WORDS = [
+  ['fire',       ['fire','wildfire','haze','smoke','burning']],
+  ['flood',      ['flood','flooding','inundat']],
+  ['drought',    ['drought','dry','dryness','water stress','water shortage']],
+  ['heat',       ['heat','hot','heatwave','heat stress','feels like']],
+  ['disruption', ['disruption','overall','composite','general risk']],
+  ['rain',       ['rain','rainfall','precipitation','wet']],
+  ['temp',       ['temperature','temp','warm','cold','degrees']],
+  ['wind',       ['wind','gust']],
+  ['humidity',   ['humidity','humid']],
+  ['uv',         ['uv','sun','ultraviolet']],
+  ['oni',        ['oni','enso','phase','el nino','el niño','la nina','la niña','pacific']],
+];
+
+function findMetric(t) {
+  for (const [k, words] of METRIC_WORDS) if (words.some(w => t.includes(w))) return k;
+  return null;
+}
+
+const band = x => x >= 70 ? 'high' : x >= 45 ? 'elevated' : x >= 25 ? 'moderate' : 'low';
+
+/* Turn one model term into a sentence that names the real cause and number. */
+function termNarrative(name, val, v, loc) {
+  const p = signed(val, 0).replace('+', 'adds ').replace('-', 'subtracts ');
+  const amt = `${p} points`;
+  switch (name) {
+    case 'rainfall shortfall':
+      return `rainfall ${amt}, because the coming week is at ${Math.round(v.rainPct)}% of what ${loc.name} normally gets across these dates`;
+    case 'temperature anomaly':
+      return `the temperature anomaly ${amt}, with the week running ${signed(v.tAnom)} °C against the local normal`;
+    case 'ENSO phase': {
+      const fx = ENSO_FX[loc.region] || ENSO_FX.generic;
+      const strength = fx.conf >= 0.9 ? 'a strong, high-confidence teleconnection'
+        : fx.conf >= 0.5 ? 'a moderate teleconnection' : 'a weak, low-confidence teleconnection';
+      return `the ENSO phase ${amt} — ${loc.country || loc.name} has ${strength}, so the model weights the Pacific accordingly`;
+    }
+    case 'peak daily rain':
+      return `the heaviest single day ${amt} at ${fx(v.peakRain, 0)} mm, and drainage fails on intensity rather than weekly totals`;
+    case 'weekly rain vs normal':
+      return `the weekly total ${amt} relative to normal`;
+    case 'peak feels-like':
+      return `the peak feels-like temperature ${amt} at ${fx(T(v.maxApp), 0)}${U()}`;
+    case 'dryness': return `dryness ${amt}`;
+    case 'heat': return `heat ${amt}`;
+    case 'low humidity': return `low humidity ${amt}, averaging ${Math.round(v.humidity)}%`;
+    case 'wind': return `wind ${amt}, peaking near ${fx(v.wind, 0)} km/h`;
+    case 'worst single risk': return `the worst single hazard ${amt}`;
+    case 'breadth of risk': return `the spread across all four hazards ${amt}`;
+    default: return `${name} ${amt}`;
+  }
+}
+
+/* "Why is X that number?" — decomposed from the values actually used. */
+function explainMetric(loc, k) {
+  const v = liveVars(loc);
+  if (!v) return `I do not have live data for ${loc.name} yet.`;
+  const ix = computeIndices(loc.region, v);
+
+  if (k === 'oni') {
+    const h = headlineAnom();
+    if (!num(h)) return 'The ENSO phase is not calibrated right now, so I will not put a number on it. ' + GLOSSARY.oni.text;
+    const ph = phaseOf(h);
+    const fx = ENSO_FX[loc.region] || ENSO_FX.generic;
+    const push = ix.dryPush;
+    return `Niño 3.4 is running ${signed(h)} °C, which is ${ph.name}${ph.strength ? ', ' + ph.strength.toLowerCase() : ''}. `
+      + `For ${loc.name} that translates into ${signed(push, 1)} points on the drought side of the model, because `
+      + `${loc.country || loc.name} has a ${fx.conf >= 0.9 ? 'strong' : fx.conf >= 0.5 ? 'moderate' : 'weak'} `
+      + `teleconnection to the Pacific. ${Math.abs(push) < 1.5 ? 'That is close to nothing, which is the honest answer here.' : ''}`;
+  }
+
+  if (['rain','temp','wind','humidity','uv'].includes(k)) return describeVar(loc, k);
+
+  /* Disruption is a composite of the other four, so restating its own two terms
+     explains nothing — recurse into whichever hazard is actually driving it. */
+  if (k === 'disruption') {
+    const ranked = IX_META.filter(m => m.k !== 'disruption')
+      .map(m => ({ ...m, val: ix[m.k] })).sort((a, b) => b.val - a.val);
+    const top = ranked[0], rest = ranked.slice(1);
+    return `${loc.name}'s disruption index is ${Math.round(ix.disruption)} out of 100 — ${band(ix.disruption)}. `
+      + `Disruption is a composite: sixty percent from the worst single hazard, forty percent from the average `
+      + `of all four. Here the worst is ${top.label.toLowerCase()} at ${Math.round(top.val)}, with `
+      + `${rest.map(r => `${r.label.toLowerCase()} ${Math.round(r.val)}`).join(', ')}. `
+      + `So the real question is why ${top.label.toLowerCase()} is ${Math.round(top.val)}: `
+      + `${termsSentence(loc, top.k, ix, v)}.`;
+  }
+
+  const terms = ix.terms[k];
+  if (!terms) return explainTerm('model');
+  const val = ix[k];
+  const capped = terms.reduce((a, [, x]) => a + x, 0) > 100
+    ? ' The raw terms total more than one hundred, so the index is capped there.' : '';
+  return `${loc.name}'s ${k} index is ${Math.round(val)} out of 100 — ${band(val)}. `
+    + `In order of contribution: ${termsSentence(loc, k, ix, v)}.${capped}`;
+}
+
+function termsSentence(loc, k, ix, v) {
+  const terms = ix.terms[k] || [];
+  return [...terms].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .map(([n2, x]) => termNarrative(n2, x, v, loc)).join('; ');
+}
+
+function describeVar(loc, k) {
+  const s = summarize(loc);
+  if (!s) return `No live data for ${loc.name} yet.`;
+  const d = s.daily, h = s.f.hourly, i0 = s.hourIdx;
+  switch (k) {
+    case 'rain': {
+      const p7 = d.precipitation_sum.reduce((a, b) => a + (b || 0), 0);
+      const peak = Math.max(...d.precipitation_sum);
+      const day = dayName(d.time[d.precipitation_sum.indexOf(peak)], s.f.timezone);
+      return `${loc.name} has ${fx(p7, 0)} mm forecast over seven days`
+        + (num(s.pNorm) ? `, against a normal of ${fx(s.pNorm, 0)} mm — ${num(s.pPct) && s.pPct < 999 ? Math.round(s.pPct) + '% of normal' : 'well above a near-zero normal'}` : '')
+        + `. The heaviest day is ${day} at ${fx(peak, 0)} mm.`;
+    }
+    case 'temp':
+      return `${loc.name} is ${fx(T(s.cur.temperature_2m), 0)}${U()}, feels like ${fx(T(s.cur.apparent_temperature), 0)}${U()}. `
+        + `The week peaks at ${fx(T(Math.max(...d.time.map((_, i) => appMax(d, i)))), 0)}${U()} feels-like`
+        + (num(s.tAnom) ? `, running ${signed(dT(s.tAnom))}${U()} against the local normal for these dates.` : '.');
+    case 'wind':
+      return `Wind at ${loc.name} is ${fx(s.cur.wind_speed_10m, 0)} km/h from the ${compass(s.cur.wind_direction_10m)}, `
+        + `gusting ${fx(s.cur.wind_gusts_10m, 0)}. The week peaks near ${fx(Math.max(...(d.wind_speed_10m_max || [0])), 0)} km/h.`;
+    case 'humidity': {
+      const hum = s.cur.relative_humidity_2m, tmp = s.cur.temperature_2m;
+      return `Humidity at ${loc.name} is ${fx(hum, 0)}%. `
+        + (hum >= 70 && tmp >= 30 ? 'Combined with the heat that is the dangerous pairing — sweat stops evaporating, so the body loses its main cooling route.'
+          : hum <= 25 ? 'That is dry enough to raise fire and dust risk.' : 'That is a comfortable range.');
+    }
+    case 'uv': {
+      const uv = h && h.uv_index ? h.uv_index[i0] : (d.uv_index_max || [])[0];
+      return `U V at ${loc.name} is ${fx(uv, 1)}, peaking at ${fx((d.uv_index_max || [])[0], 1)} today. `
+        + (num(uv) && uv >= 8 ? 'Above eight, unprotected skin burns in under twenty minutes.' : '');
+    }
+  }
+  return '';
+}
+
+function explainTerm(key) {
+  const g = GLOSSARY[key];
+  return g ? g.text : GLOSSARY.model.text;
+}
+
+/* Grounded advice: the real top hazard plus the region's written playbook. */
+function adviseFor(loc) {
+  const v = liveVars(loc);
+  if (!v) return `No live data for ${loc.name} yet.`;
+  const ix = computeIndices(loc.region, v);
+  const ranked = IX_META.filter(m => m.k !== 'disruption')
+    .map(m => ({ ...m, val: ix[m.k] })).sort((a, b) => b.val - a.val);
+  const top = ranked[0];
+  const ph = phaseOf(headlineAnom());
+  const L = LENS[loc.region] || LENS.generic;
+  const lens = L[ph.key];
+  const pts = lens.pts.slice(0, 3).join(' ');
+  const lead = top.val < 25
+    ? `Nothing at ${loc.name} is flagging right now — the highest index is ${top.label.toLowerCase()} at only ${Math.round(top.val)}.`
+    : `At ${loc.name} the thing to manage is ${top.label.toLowerCase()}, at ${Math.round(top.val)} out of 100 — ${band(top.val)}.`;
+  return `${lead} Confidence in the ENSO steer here is ${lens.conf}. ${pts}`
+    + (L.watch.length ? ` Seasonally, watch: ${L.watch.join(', ')}.` : '');
+}
+
+function whenPeaks(loc) {
+  const tr = trajectory(loc);
+  if (!tr.length) return `No trajectory for ${loc.name} yet.`;
+  const peak = tr.reduce((a, b) => b.y > a.y ? b : a);
+  const i = tr.indexOf(peak);
+  const s = summarize(loc);
+  const when = i === 0 ? 'today' : dayName(peak.t, s && s.f.timezone);
+  const now = tr[0].y;
+  const dir = peak.y > now + 4 ? 'so it gets worse before it eases'
+    : peak.y < now - 4 ? 'so the worst is already behind you' : 'so it stays roughly flat';
+  return `${loc.name} peaks ${when} at a disruption index of ${Math.round(peak.y)}, `
+    + `against ${Math.round(now)} today — ${dir}.`;
+}
+
+function compareLocs(a, b) {
+  const va = liveVars(a), vb = liveVars(b);
+  if (!va || !vb) return 'I need live data for both places first.';
+  const ia = computeIndices(a.region, va), ib = computeIndices(b.region, vb);
+  const gap = ia.disruption - ib.disruption;
+
+  const diffs = IX_META.filter(m => m.k !== 'disruption')
+    .map(m => ({ label: m.label, k: m.k, d: ia[m.k] - ib[m.k] }))
+    .sort((x, y) => Math.abs(y.d) - Math.abs(x.d));
+  const widest = diffs[0];
+  const detail = Math.abs(widest.d) < 3
+    ? 'No single hazard separates them meaningfully either — they are exposed in much the same way.'
+    : `The widest gap is ${widest.label.toLowerCase()}: ${Math.round(Math.abs(widest.d))} points `
+      + `higher at ${widest.d > 0 ? a.name : b.name} (${Math.round(ia[widest.k])} against ${Math.round(ib[widest.k])}).`;
+
+  if (Math.abs(gap) < 4)
+    return `${a.name} and ${b.name} are effectively level: disruption ${Math.round(ia.disruption)} `
+      + `against ${Math.round(ib.disruption)}. ${detail}`;
+
+  const worse = gap > 0 ? a : b, other = gap > 0 ? b : a;
+  return `${worse.name} is the more exposed: disruption ${Math.round(Math.max(ia.disruption, ib.disruption))} `
+    + `against ${Math.round(Math.min(ia.disruption, ib.disruption))} at ${other.name}. ${detail}`;
+}
+
 /* ---- command grammar ---- */
 
 const LOC_ALIASES = {
@@ -2926,10 +3302,13 @@ function briefAlerts() {
   return `${a.length} watch item${a.length === 1 ? '' : 's'}. Top: ${a[0].title}. ${a[0].body}`;
 }
 
-const HELP = 'Commands: status, alerts, crisis, help. Show a place — Dubai, Bali, Thailand, Beirut, '
-  + 'Istanbul. Risk in Thailand. Weather in Bali. Open overview, synthesis or simulator. '
-  + 'Simulate strong El Niño, or strong La Niña. Set El Niño to 1.5. Rainfall to 60 percent. '
-  + 'Celsius or Fahrenheit. Refresh. Mute. Stop listening.';
+const HELP = 'I can do four kinds of thing. One: report — status, alerts, crisis, how bad is Bali. '
+  + 'Two: explain — what is the drought index, what does O N I mean, how does the risk model work. '
+  + 'Three: reason — why is disruption high in Bangkok, when does it peak, compare Bali and Thailand, '
+  + 'what should I do. Four: control — open synthesis, simulate strong El Niño, set El Niño to two, '
+  + 'rainfall to forty percent, celsius, refresh, mute, stop listening. '
+  + 'I keep track of what we were discussing, so you can just say “why?” or “what about Beirut?” and '
+  + 'I will carry the subject across.';
 
 /* Spoken numbers arrive as words often enough to be worth handling. */
 const WORD_NUM = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8,
@@ -2943,20 +3322,77 @@ function grabNumber(t) {
   return null;
 }
 
+/* ═══════════════ conversation ═════════════════════════════════════════════ */
+
+const CONV = { loc: null, metric: null, intent: null, log: [] };
+
+/* Scroll a section into view under the sticky tab bar and flag it briefly. */
+function focusOn(sel) {
+  const el = typeof sel === 'string' ? $(sel) : sel;
+  if (!el) return;
+  requestAnimationFrame(() => {
+    let y = 0;
+    for (let n = el; n; n = n.offsetParent) y += n.offsetTop;
+    window.scrollTo({ top: Math.max(0, y - 72), behavior: 'smooth' });
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 2000);
+  });
+}
+
+function pushLog(who, text) {
+  if (!text) return;
+  CONV.log.push({ who, text });
+  if (CONV.log.length > 40) CONV.log.shift();
+  renderLog();
+}
+
+function renderLog() {
+  const html = CONV.log.map(l =>
+    `<div class="lg lg-${l.who}"><span>${l.who === 'you' ? 'YOU' : 'JARVIS'}</span>${esc(l.text)}</div>`).join('');
+  for (const id of ['#vLog', '#dockLog']) {
+    const el = $(id);
+    if (!el) continue;
+    el.innerHTML = html || '<div class="lg lg-sys">Ask me anything about the data. Try “what does the drought index mean?” or “how bad is Bali?”</div>';
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+/* A fragment with no subject of its own is a follow-up on the last turn. */
+function isFollowUp(t) {
+  return /^\s*(and|what about|how about|ok|okay|so|then|why|what if|there|that|it|more|tell me more|go on|explain|really|and there|same)\b/.test(t.trim())
+    || t.trim().split(/\s+/).length <= 3;
+}
+
 function runCommand(raw) {
   const t = ' ' + raw.toLowerCase().replace(/[^\p{L}\p{N}.\s-]/gu, ' ').replace(/\s+/g, ' ').trim() + ' ';
   $('#vHeard').textContent = raw;
+  const dh = $('#dockHeard'); if (dh) dh.textContent = raw;
   if (!t.trim()) return;
+  pushLog('you', raw);
 
   V.busy = true;
   setTimeout(() => { V.busy = false; }, 700);
 
-  const loc = findLocation(t);
+  const follow = isFollowUp(t);
+  const anaphor = /\b(there|that place|same place|over there|the same)\b/.test(t);
+
+  /* resolve the subject against the conversation before falling back */
+  let loc = findLocation(t);
+  if (!loc && (anaphor || follow) && CONV.loc) loc = locById(CONV.loc);
+  const locExplicit = !!findLocation(t);
+
+  const metricExplicit = findMetric(t);
+  let metric = metricExplicit;
+  if (!metric && follow) metric = CONV.metric;
+
   const has = (...w) => w.some(x => t.includes(' ' + x));
 
   /* control */
   if (has('stop listening', 'sleep', 'standby', 'stand by')) { stopListening(); return respond('Standing by.'); }
-  if (has('mute', 'quiet', 'silence')) { V.tts = false; store.set('tts', false); syncTts(); return respond(''); }
+  if (has('mute', 'quiet', 'silence')) { V.tts = false; store.set('tts', false); syncTts();
+    return respond('Voice replies off. I will keep writing them here.'); }
   if (has('unmute', 'speak', 'talk to me')) { V.tts = true; store.set('tts', true); syncTts(); return respond('Voice replies on.'); }
   if (has('help', 'commands', 'what can you do')) return respond(HELP);
   if (has('refresh', 'update', 'reload')) { refreshAll(); return respond('Refreshing all feeds.'); }
@@ -2992,37 +3428,116 @@ function runCommand(raw) {
                      : 'No criteria would trip.'));
   }
 
+  /* ---- reasoning intents, checked before the flat lookups ---- */
+  const subject = loc || locById(state.selected);
+  const remember = (m, i) => { CONV.loc = subject ? subject.id : CONV.loc; CONV.metric = m || CONV.metric; CONV.intent = i; };
+
+  const wantsWhy     = /\bwhy\b|\bhow come\b|what.s (driving|behind|causing)|what is (driving|behind|causing)/.test(t);
+  const wantsWhat    = /\bwhat (is|are|does|do)\b|\bwhat.s\b|\bexplain\b|\bdefine\b|\bmean(s|ing)?\b|\btell me about\b|\bhow does\b|\bhow do you\b/.test(t);
+  const wantsAdvice  = /\b(advise|advice|recommend|suggest|what should i|should i|what do i do|do about|prepare|mitigat|action)\b/.test(t);
+  const wantsWhen    = /\b(when|how long|which day|worst day|peak|peaks|getting worse|improve)\b/.test(t);
+  const wantsCompare = /\b(compare|versus|vs|worse than|better than|difference between|which is worse)\b/.test(t);
+  const wantsMore    = /\b(more|go on|elaborate|expand|detail|in detail|deeper)\b/.test(t);
+  const wantsBad     = /\b(how bad|how risky|how dangerous|how exposed|situation|serious)\b/.test(t);
+
+  if (wantsCompare) {
+    const all = findAllLocations(t);
+    const a = all[0] || subject, b = all[1] || (CONV.loc && locById(CONV.loc) !== a ? locById(CONV.loc) : null);
+    if (a && b && a.id !== b.id) {
+      goTo(a, 'synth'); remember(metric, 'compare');
+      return respond(compareLocs(a, b));
+    }
+    return respond('Name two places to compare — for example, “compare Bali and Thailand”.');
+  }
+
+  if (wantsWhy) {
+    const m = metric || 'disruption';
+    goTo(subject, m === 'oni' ? 'overview' : 'synth');
+    remember(m, 'why');
+    return respond(explainMetric(subject, m));
+  }
+
+  if (wantsAdvice) { goTo(subject, 'overview'); remember(metric, 'advise'); return respond(adviseFor(subject)); }
+  if (wantsWhen)   { goTo(subject, 'synth'); remember(metric, 'when'); return respond(whenPeaks(subject)); }
+
+  if (wantsWhat) {
+    const g = findGlossary(t);
+    if (g) { remember(metric, 'define'); return respond(explainTerm(g)); }
+    if (metric) {
+      if (['drought','flood','heat','fire','disruption'].includes(metric)) {
+        goTo(subject, 'synth'); remember(metric, 'define');
+        return respond(explainTerm(metric) + ' ' + explainMetric(subject, metric));
+      }
+      goTo(subject, 'overview'); remember(metric, 'define');
+      return respond(describeVar(subject, metric));
+    }
+  }
+
+  if (wantsMore) {
+    const m = CONV.metric || 'disruption';
+    goTo(subject, 'synth'); remember(m, 'more');
+    return respond(explainMetric(subject, m) + ' ' + adviseFor(subject));
+  }
+
   /* views */
   if (has('crisis', 'emergency', 'disaster', 'events', 'incidents')) {
-    setView('crisis'); return respond(briefCrisis());
+    setView('crisis'); focusOn('#crisisNear'); remember(metric, 'crisis');
+    return respond(briefCrisis());
   }
   if (has('synthesis', 'analysis', 'indices')) {
-    setView('synth'); return respond(briefRisk(loc || locById(state.selected)));
+    goTo(subject, 'synth'); remember(metric, 'risk'); return respond(briefRisk(subject));
   }
-  if (has('simulator')) { setView('sim'); return respond('Simulator.'); }
+  if (has('simulator')) { setView('sim'); return respond('Simulator. Set the variables and I will tell you which criteria trip.'); }
   if (has('overview', 'dashboard', 'home', 'main')) { setView('overview'); return respond('Overview.'); }
-  if (has('alert', 'warning', 'watch item')) { setView('overview'); return respond(briefAlerts()); }
+  if (has('alert', 'warning', 'watch item')) { setView('overview'); focusOn('#alerts'); return respond(briefAlerts()); }
 
-  /* location-scoped queries */
-  if (loc) {
-    state.selected = loc.id; store.set('selected', state.selected);
-    if (!state.norm[keyOf(loc)]) loadNormals(loc).then(render).catch(() => {});
-    if (has('risk', 'danger', 'threat', 'index', 'drought', 'flood', 'fire')) {
-      setView('synth'); render(); return respond(briefRisk(loc));
-    }
-    setView('overview'); render();
+  /* Location-scoped queries. Requires the place to be named outright or referred
+     to by a pronoun — a bare unrecognised fragment must not silently inherit the
+     last subject and come back as a confident report about it. */
+  if (locExplicit || (loc && anaphor)) {
+    const riskish = wantsBad || has('risk', 'danger', 'threat', 'index')
+      || ['drought','flood','fire','heat','disruption'].includes(metric);
+    if (riskish) { goTo(loc, 'synth'); remember(metric, 'risk'); return respond(briefRisk(loc)); }
+    goTo(loc, 'overview'); remember(metric, 'report');
     return respond(briefLoc(loc));
   }
 
   /* general briefing */
   if (has('status', 'report', 'brief', 'sitrep', 'situation', 'how are things')) {
-    const sel = locById(state.selected);
-    return respond(`${briefEnso()} ${briefLoc(sel)} ${briefAlerts()}`);
+    remember(metric, 'status');
+    return respond(`${briefEnso()} ${briefLoc(subject)} ${briefAlerts()}`);
   }
-  if (has('el nino', 'el niño', 'la nina', 'la niña', 'enso', 'oni', 'phase')) return respond(briefEnso());
-  if (has('weather', 'temperature', 'forecast', 'rain')) return respond(briefLoc(locById(state.selected)));
+  if (metric === 'oni' || has('enso', 'oni', 'phase')) { remember('oni', 'enso'); return respond(briefEnso()); }
+  if (metricExplicit) { goTo(subject, 'overview'); remember(metricExplicit, 'report');
+    return respond(describeVar(subject, metricExplicit)); }
+  if (has('weather', 'forecast')) { remember(metric, 'report'); return respond(briefLoc(subject)); }
 
-  return respond(`I did not catch a command in “${raw}”. Say “help” for the list.`);
+  return respond(`I did not follow “${raw}”. I can explain any number on this dashboard, say why it is what it is, `
+    + `compare two places, or advise on what to do. Say “help” for the full list.`);
+}
+
+function findAllLocations(t) {
+  const out = [];
+  for (const [id, words] of Object.entries(LOC_ALIASES))
+    if (words.some(w => t.includes(w))) {
+      const s = SPOTLIGHTS.find(x => x.id === id);
+      if (s && !out.some(o => o.id === s.id)) out.push(s);
+    }
+  return out;
+}
+
+/* Select a place, switch to the right tab, and scroll it into view. */
+function goTo(loc, view) {
+  if (!loc) return;
+  if (loc.id !== state.selected) {
+    state.selected = loc.id;
+    store.set('selected', state.selected);
+    if (!state.norm[keyOf(loc)]) loadNormals(loc).then(render).catch(() => {});
+  }
+  CONV.loc = loc.id;
+  setView(view || 'overview');
+  render();
+  focusOn(view === 'synth' ? ('#synth-' + loc.id) : view === 'sim' ? '#simOut' : '#detailTitle');
 }
 
 function syncTts() {
@@ -3051,6 +3566,34 @@ function initVoice() {
     + 'Chrome, Edge and Safari have it, Firefox does not. Every command still works from the line above.');
   window.addEventListener('resize', () => resizeViz());
   document.addEventListener('visibilitychange', () => document.hidden ? stopViz() : startViz());
+
+  /* floating dock — appears once the hero scrolls away, so JARVIS stays reachable */
+  const dock = $('#dock');
+  const onScroll = () => {
+    const hero = $('.hud');
+    const past = hero ? (hero.getBoundingClientRect().bottom < 60) : window.scrollY > 260;
+    if (past === !dock.hidden) return;
+    dock.hidden = !past;
+    if (past) requestAnimationFrame(resizeViz);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  $('#dockOrb').addEventListener('click', () => {
+    const p = $('#dockPanel');
+    p.hidden = !p.hidden;
+    if (!p.hidden) { renderLog(); setTimeout(() => $('#dockInput').focus(), 40); }
+  });
+  $('#dockClose').addEventListener('click', () => { $('#dockPanel').hidden = true; });
+  $('#dockMic').addEventListener('click', toggleListening);
+  $('#dockForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const val = $('#dockInput').value.trim();
+    if (!val) return;
+    $('#dockInput').value = '';
+    runCommand(val);
+  });
+  renderLog();
 }
 
 /* ─────────── passcode gate ─────────────────────────────────────────────
