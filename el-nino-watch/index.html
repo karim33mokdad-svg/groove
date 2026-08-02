@@ -785,7 +785,7 @@
   <div class="crisis-grid">
     <section class="card pad-0">
       <div style="padding:16px 16px 0"><div class="h">Near your locations</div>
-        <div class="xs dim" id="crisisNearNote">within 1,200 km of a tracked place</div></div>
+        <div class="xs dim" id="crisisNearNote">within 1,200 km of a tracked place — spotlight regions first</div></div>
       <div id="crisisNear"></div>
     </section>
     <section class="card pad-0">
@@ -1115,7 +1115,13 @@ async function fetchJSON(url, { timeout = 25000, retries = 2 } = {}) {
       clearTimeout(timer);
       if (!res.ok) {
         const body = await res.text().catch(() => '');
-        throw new Error('HTTP ' + res.status + (body ? ' — ' + body.slice(0, 140) : ''));
+        let msg = body.slice(0, 140);
+        try {                                   // most APIs nest the real reason
+          const j = JSON.parse(body);
+          const m = j && (j.error && (j.error.message || j.error.description) || j.message);
+          if (m) msg = String(m);
+        } catch { /* not JSON — keep the raw prefix */ }
+        throw new Error('HTTP ' + res.status + (msg ? ' — ' + msg : ''));
       }
       return await res.json();
     } catch (e) {
@@ -2147,13 +2153,21 @@ function haversine(a, b, c, d) {
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 
+/* Distance to the nearest tracked place, tracking spotlights separately: a
+   watch-list city (Los Angeles) should not bury events near the places this
+   dashboard actually exists to watch. */
 function nearestTracked(lat, lon) {
-  let best = null;
+  let best = null, bestSpot = null;
+  for (const l of SPOTLIGHTS) {
+    const km = haversine(lat, lon, l.lat, l.lon);
+    if (!bestSpot || km < bestSpot.km) bestSpot = { km, name: l.name };
+  }
   for (const l of [...SPOTLIGHTS, ...state.watch]) {
     const km = haversine(lat, lon, l.lat, l.lon);
     if (!best || km < best.km) best = { km, name: l.name };
   }
-  return best;
+  return { km: best ? best.km : null, name: best ? best.name : null,
+           kmSpot: bestSpot ? bestSpot.km : null, nameSpot: bestSpot ? bestSpot.name : null };
 }
 
 function rwCategory(typeName) {
@@ -2165,6 +2179,29 @@ function rwCategory(typeName) {
   if (t.includes('land slide') || t.includes('landslide') || t.includes('mud')) return 'landslides';
   if (t.includes('heat') || t.includes('wave')) return 'temperatureExtremes';
   return 'other';
+}
+
+/* v2's exact envelope could not be checked from here, so read both the
+   {data:[{fields:{...}}]} and flattened shapes, and both object and string
+   forms of country/type/date. */
+function parseReliefWeb(json) {
+  const rows = (json && (json.data || json.results || json.items)) || [];
+  const nameOf = x => typeof x === 'string' ? x : (x && (x.name || x.title)) || '';
+  const out = [];
+  for (const d of rows) {
+    const f = (d && d.fields) || d || {};
+    const name = f.name || f.title || '';
+    if (!name) continue;
+    const type = Array.isArray(f.type) ? nameOf(f.type[0]) : nameOf(f.type);
+    const countries = (Array.isArray(f.country) ? f.country : [f.country])
+      .map(nameOf).filter(Boolean);
+    const dt = f.date;
+    const when = !dt ? null
+      : typeof dt === 'string' ? dt
+      : (dt.created || dt.changed || dt.event || dt.original || null);
+    out.push({ name, type, countries, when, url: f.url || f.url_alias || d.href || null });
+  }
+  return out;
 }
 
 const TRACKED_COUNTRIES = ['emirates','indonesia','thailand','lebanon','türkiye','turkey'];
@@ -2193,28 +2230,49 @@ async function loadCrisis() {
         if (!num(lat) || !num(lon)) continue;
         const near = nearestTracked(lat, lon);
         items.push({ src: 'EONET', cat, title: e.title, when, lat, lon,
-          url: (e.sources || [])[0]?.url || e.link, km: near ? near.km : null,
-          nearName: near ? near.name : null, place: null });
+          url: (e.sources || [])[0]?.url || e.link, km: near.km, nearName: near.name,
+          kmSpot: near.kmSpot, place: null });
       }
     })
     .catch(e => errors.push('NASA EONET: ' + (e.message || 'unreachable')));
 
-  const relief = fetchJSON('https://api.reliefweb.int/v1/disasters?appname=el-nino-watch'
-      + '&profile=list&limit=40&sort%5B%5D=date%3Adesc', { retries: 1, timeout: 20000 })
-    .then(r => {
-      for (const d of (r.data || [])) {
-        const f = d.fields || {};
-        const type = ((f.type || [])[0] || {}).name || '';
-        const countries = (f.country || []).map(c => c.name).filter(Boolean);
-        const cat = rwCategory(type + ' ' + (f.name || ''));
-        if (cat === 'other' && !type) continue;
-        const match = countries.some(c => TRACKED_COUNTRIES.some(t => c.toLowerCase().includes(t)));
-        items.push({ src: 'ReliefWeb', cat, title: f.name || type, place: countries.join(', '),
-          when: (f.date || {}).created || (f.date || {}).changed, url: f.url,
-          km: match ? 0 : null, nearName: match ? countries[0] : null });
-      }
-    })
-    .catch(e => errors.push('ReliefWeb: ' + (e.message || 'unreachable')));
+  /* ReliefWeb decommissioned the v1 API (HTTP 410), so this targets v2 and walks
+     a chain from most specific to most minimal — if the field or sort syntax has
+     moved, the bare query still returns rows. Whatever comes back is parsed
+     tolerantly, because the exact v2 envelope could not be verified offline. */
+  const RW_BASE = 'https://api.reliefweb.int/v2/disasters?appname=el-nino-watch&limit=40';
+  const RW_TRIES = [
+    RW_BASE + '&sort%5B%5D=date%3Adesc'
+      + '&fields%5Binclude%5D%5B%5D=name&fields%5Binclude%5D%5B%5D=date'
+      + '&fields%5Binclude%5D%5B%5D=country&fields%5Binclude%5D%5B%5D=type'
+      + '&fields%5Binclude%5D%5B%5D=url&fields%5Binclude%5D%5B%5D=status',
+    RW_BASE + '&sort%5B%5D=date%3Adesc',
+    RW_BASE,
+  ];
+
+  const relief = (async () => {
+    let lastErr = null;
+    for (const url of RW_TRIES) {
+      try {
+        const rows = parseReliefWeb(await fetchJSON(url, { retries: 0, timeout: 18000 }));
+        if (rows.length) {
+          for (const r of rows) {
+            const cat = rwCategory(r.type + ' ' + r.name);
+            if (cat === 'other' && !r.type) continue;
+            const match = r.countries.some(c =>
+              TRACKED_COUNTRIES.some(t => c.toLowerCase().includes(t)));
+            items.push({ src: 'ReliefWeb', cat, title: r.name,
+              place: r.countries.join(', '), when: r.when, url: r.url,
+              km: match ? 0 : null, kmSpot: match ? 0 : null,
+              nearName: match ? r.countries[0] : null });
+          }
+          return;
+        }
+        lastErr = 'returned no usable records';
+      } catch (e) { lastErr = (e.message || 'unreachable'); }
+    }
+    errors.push('ReliefWeb: ' + lastErr);
+  })();
 
   await Promise.all([eonet, relief]);
   items.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
@@ -2234,7 +2292,11 @@ function renderCrisis() {
 
   const list = c.items.filter(pass);
   const isNear = it => num(it.km) && it.km <= 1200;
-  const a = list.filter(isNear).slice(0, 40);
+  /* Events near a spotlight lead; watch-list cities (Los Angeles and friends)
+     follow, so US wildfires cannot crowd out the regions being watched. */
+  const tier = it => (num(it.kmSpot) && it.kmSpot <= 1200) ? 0 : 1;
+  const a = list.filter(isNear).sort((x, y) =>
+    (tier(x) - tier(y)) || ((tier(x) === 0 ? x.kmSpot - y.kmSpot : x.km - y.km))).slice(0, 40);
   const b = list.filter(it => !isNear(it)).slice(0, 40);
 
   $('#crisisBadge').hidden = !a.length;
