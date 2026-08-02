@@ -50,6 +50,29 @@ alongside. Any other city can be added to the watch list via search.
 The risk model is a transparent heuristic, not a validated forecast model.
 It is built for comparing scenarios, not for predicting outcomes.
 
+**JARVIS voice interface**
+
+The dashboard is skinned as a Stark-style HUD — cyan on black, corner-bracketed
+panels, monospace technical type — with an arc reactor at the top that is a
+working voice command interface, not decoration.
+
+Tap the core to grant mic access. The ring is driven by a real Web Audio
+analyser on the live microphone signal, so it reacts to your actual voice; with
+no mic it idles on a slow standing wave instead of faking activity.
+
+Speech recognition uses the Web Speech API (Chrome, Edge and Safari — Firefox
+does not ship it). Every command also works from the typed command line, which
+is the fallback whenever the mic is blocked or recognition is unavailable, and
+the HUD says which of those happened rather than silently doing nothing.
+
+Commands include: `status`, `alerts`, `crisis`, `help`; `show Bali`,
+`risk in Thailand`, `weather in Dubai`; `open synthesis` / `simulator` /
+`overview`; `simulate strong El Niño`, `set El Niño to 2.5`,
+`rainfall to 40 percent`; `celsius` / `fahrenheit`; `refresh`; `mute`;
+`stop listening`. Spoken replies come from the browser's speech synthesis and
+can be muted. Every reply is generated from the live computed data — the
+briefings read out real anomalies, indices and criteria states.
+
 Data comes from the [Open-Meteo](https://open-meteo.com/) forecast, marine
 and ERA5 archive APIs. The watch list and the cached climate normals are
 stored in the browser only.
