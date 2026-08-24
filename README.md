@@ -156,3 +156,35 @@ briefings read out real anomalies, indices and criteria states.
 Data comes from the [Open-Meteo](https://open-meteo.com/) forecast, marine
 and ERA5 archive APIs. The watch list and the cached climate normals are
 stored in the browser only.
+
+
+## Optional: connecting Claude
+
+Off by default, and the dashboard is complete without it. Connect an Anthropic
+API key (or a proxy URL) under **Claude** in the top bar and two things switch
+on:
+
+- **A written daily briefing** on the Overview tab — one Claude Opus 5 call per
+  day, cached, covering all cities plus which headlines actually matter.
+- **Open questions** — the assistant's rule engine still answers everything it
+  can exactly and for free; anything it has no rule for ("should I move my Bali
+  trip to November?") goes to Claude Haiku 4.5.
+
+**Claude never produces a number.** It is handed the deterministic model's
+output as JSON and asked to explain it, under a system prompt that forbids
+estimating or inventing figures. Anything it wrote carries a "Written by
+Claude" byline, so computed text and written text are never confused.
+
+**Cost.** Roughly 4c per daily briefing and half a cent per question. A $10
+balance covers well over a year of daily briefings plus a couple of thousand
+questions. There is a daily call cap (default 40) and a running spend estimate
+in the settings dialog. Set a spend limit in the Anthropic Console as the real
+backstop.
+
+**Key safety.** A key pasted into the dashboard is stored only in that
+browser, never committed and never sent anywhere but Anthropic — but this page
+is served from a public URL, so anyone using that device could read it out.
+The safer route is `el-nino-watch/worker.js`, a ready-made Cloudflare Worker
+that holds the key server-side; deploy it and paste its URL into the proxy
+field instead. The worker restricts callers by origin, requires a shared
+secret, and allows only the two models this dashboard uses.

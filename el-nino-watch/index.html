@@ -550,6 +550,16 @@
   .mapread{margin-top:10px;font-size:13px;color:var(--txt-2);min-height:20px;
     border-left:2px solid var(--accent);padding-left:10px;}
 
+  /* ---------- Claude-written text, always labelled ---------- */
+  .byline{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.14em;text-transform:uppercase;color:#c9a7ff;border:1px solid rgba(201,167,255,.4);
+    background:rgba(201,167,255,.08);border-radius:2px;padding:2px 7px;}
+  .brief-head{font-size:20px;font-weight:650;letter-spacing:-.01em;color:var(--txt);
+    line-height:1.35;margin-top:10px;}
+  .brief-body{font-size:14.5px;color:var(--txt-2);line-height:1.65;margin-top:9px;}
+  .brief-city{font-size:13.5px;color:var(--txt-2);line-height:1.55;}
+  .brief-city b{color:var(--txt);font-weight:650;}
+
   /* ---------- plain english, momentum, accuracy ---------- */
   .plain{border-left:2px solid var(--accent);padding-left:14px;}
   .plain-head{font-size:19px;font-weight:650;letter-spacing:-.01em;color:var(--txt);line-height:1.35;
@@ -693,6 +703,7 @@
            stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
       Refresh
     </button>
+    <button class="btn" id="aiBtn" title="Connect Claude">Claude</button>
     <button class="btn" id="about" title="Data sources and method">Method</button>
     <div class="stamp" id="stamp">—</div>
   </header>
@@ -726,6 +737,7 @@
         <button data-cmd="compare bali and thailand">Compare</button>
         <button data-cmd="crisis">Crisis</button>
         <button data-cmd="help">Help</button>
+        <button data-cmd="brief me">Briefing</button>
         <button data-cmd="mute" id="ttsBtn">Voice reply: on</button>
       </div>
       <div class="vwarn" id="vWarn" hidden></div>
@@ -745,6 +757,9 @@
   </nav>
 
 <section class="view on" id="v-overview" role="tabpanel">
+
+  <section class="card" id="briefCard" hidden></section>
+
 
   <!-- ══ ENSO state ══ -->
   <div class="sec-title">
@@ -898,6 +913,7 @@
   </div>
 
   <div class="news-grid">
+    <div style="display:flex;flex-direction:column;gap:14px">
     <section class="card pad-0">
       <div style="padding:16px 16px 0">
         <div class="row wrap-w">
@@ -910,6 +926,10 @@
       </div>
       <div id="notifList"></div>
     </section>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+    <section class="card pad-0" id="briefNews" hidden></section>
 
     <section class="card pad-0">
       <div style="padding:16px 16px 0">
@@ -940,6 +960,7 @@
         </p>
       </div>
     </section>
+    </div>
   </div>
 </section>
 
@@ -1065,6 +1086,42 @@
     <span>J</span>
   </button>
 </div>
+
+<dialog id="aiDlg">
+  <h3>Connect Claude</h3>
+  <p>Optional. Everything on this dashboard works without it — connecting Claude adds a written
+     daily briefing and lets the assistant answer questions it has no rule for.
+     <b>It never produces numbers.</b> It is handed the computed data and asked to explain it,
+     and anything it wrote is labelled on screen.</p>
+
+  <label class="fld"><span>Anthropic API key</span>
+    <input id="aiKey" type="password" placeholder="sk-ant-…" autocomplete="off"></label>
+  <p class="xs dim" style="line-height:1.55;margin-top:8px">
+    Stored only in this browser, on this device. It is never committed to the repository and never
+    sent anywhere except Anthropic. But this page is served from a public URL — anyone who can use
+    <i>your</i> device could read the key out of it. Set a spend limit in the Anthropic Console as
+    your real backstop.
+  </p>
+
+  <label class="fld" style="margin-top:14px"><span>Or a proxy URL (safer — key never enters the browser)</span>
+    <input id="aiProxy" type="text" placeholder="https://your-worker.workers.dev" autocomplete="off"></label>
+  <p class="xs dim" style="line-height:1.55;margin-top:8px">
+    If set, this is used instead of the key and no key is sent from the page. A ready-made Cloudflare
+    Worker is in the repo at <code>el-nino-watch/worker.js</code> — deploying it takes a few minutes
+    and is the safer of the two routes.
+  </p>
+
+  <label class="fld" style="margin-top:14px"><span>Daily call cap</span>
+    <input id="aiCap" type="number" min="1" max="500" step="1"></label>
+
+  <div class="skill" id="aiStatus" style="margin-top:16px">—</div>
+  <div class="vwarn" id="aiWarn" hidden></div>
+
+  <div class="row" style="margin-top:18px;justify-content:flex-end">
+    <button class="btn" id="aiTest">Test &amp; brief now</button>
+    <button class="btn on" id="aiSave">Save</button>
+  </div>
+</dialog>
 
 <dialog id="aboutDlg">
   <h3>How this dashboard works</h3>
@@ -1493,6 +1550,7 @@ const state = {
   view: store.get('view') || 'overview',
   crisis: null,                           // { items, errors, at }
   crisisFilter: 'all',
+  ai: store.get('ai') || { key:'', proxy:'', cap:40, spend:null, brief:null },
   rwAppname: store.get('rwAppname') || '',// approved ReliefWeb appname, once granted
   news: null,                             // headline feed
   newsFilter: 'all',
@@ -1920,6 +1978,9 @@ function render() {
   renderCrisis();
   renderNews();
   renderNotif();
+  renderBriefing();
+  renderBriefNews();
+  renderAiStatus();
   if (state.view === 'map') renderMap();
   if (state.view === 'synth') renderSynth();
   if ($('#simVars').children.length) { renderSimOut(); updateRuleTags(); }
@@ -3690,6 +3751,52 @@ $('#results').addEventListener('click', e => {
   });
 });
 
+/* Claude settings */
+$('#aiBtn').addEventListener('click', () => {
+  $('#aiKey').value = state.ai.key || '';
+  $('#aiProxy').value = state.ai.proxy || '';
+  $('#aiCap').value = state.ai.cap || 40;
+  renderAiStatus();
+  $('#aiDlg').showModal();
+});
+$('#aiSave').addEventListener('click', () => {
+  state.ai.key = $('#aiKey').value.trim();
+  state.ai.proxy = $('#aiProxy').value.trim();
+  state.ai.cap = clamp(parseInt($('#aiCap').value, 10) || 40, 1, 500);
+  store.set('ai', state.ai);
+  renderAiStatus();
+  $('#aiDlg').close();
+  if (aiOn()) loadBriefing().catch(e => console.warn('briefing', e));
+});
+$('#aiTest').addEventListener('click', async () => {
+  const warn = $('#aiWarn');
+  state.ai.key = $('#aiKey').value.trim();
+  state.ai.proxy = $('#aiProxy').value.trim();
+  state.ai.cap = clamp(parseInt($('#aiCap').value, 10) || 40, 1, 500);
+  store.set('ai', state.ai);
+  warn.hidden = false;
+  warn.style.color = 'var(--txt-2)';
+  warn.textContent = 'Calling Claude…';
+  try {
+    await loadBriefing(true);
+    warn.style.color = 'var(--good)';
+    warn.textContent = 'Working. The briefing is on the Overview tab.';
+  } catch (e) {
+    warn.style.color = 'var(--warn)';
+    warn.textContent = (e.message || 'failed')
+      + (state.ai.proxy ? '' : ' — if this is a CORS or network error, the browser is blocking the '
+        + 'direct call; deploying the worker in the repo and using the proxy field fixes it.');
+  }
+  renderAiStatus();
+});
+document.addEventListener('click', e => {
+  if (e.target.closest('#briefRefresh')) {
+    $('#briefCard').innerHTML = '<div class="empty">Rewriting…</div>';
+    loadBriefing(true).catch(err => { $('#briefCard').innerHTML =
+      `<div class="empty">${esc(err.message || 'failed')}</div>`; });
+  }
+});
+
 /* news & notifications */
 document.addEventListener('click', async e => {
   const nf = e.target.closest('[data-nf]');
@@ -4131,6 +4238,236 @@ async function toggleListening() {
   }
   if (startListening()) setStatus('LISTENING', 'on');
   else { setStatus('MIC BLOCKED', 'err'); warn('Speech recognition failed to start. Use the command line below.'); }
+}
+
+/* ═══════════════ Claude layer ═════════════════════════════════════════════
+   Optional. Off unless a key or proxy is configured. Two hard rules:
+
+   1. Claude never produces a number. It is handed the deterministic model's
+      output as JSON and asked to narrate it. Every figure on screen still
+      comes from the maths in this file.
+   2. Anything Claude wrote is labelled as such, so you always know which
+      sentences are computed and which are written.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+const AI = {
+  CHAT_MODEL: 'claude-haiku-4-5',      // conversational layer — cheap, fast
+  BRIEF_MODEL: 'claude-opus-5',        // once a day, where the writing is read closely
+  PRICES: {                            // USD per million tokens
+    'claude-haiku-4-5': { in: 1, out: 5 },
+    'claude-opus-5':    { in: 5, out: 25 },
+  },
+};
+
+const aiOn = () => !!(state.ai.key || state.ai.proxy);
+
+function aiSpend() {
+  const day = iso(new Date());
+  let s2 = state.ai.spend;
+  if (!s2 || s2.day !== day) s2 = { day, calls: 0, cost: 0 };
+  return s2;
+}
+
+function aiBudgetLeft() {
+  const s2 = aiSpend();
+  return Math.max(0, (state.ai.cap || 40) - s2.calls);
+}
+
+async function askClaude({ model, system, messages, maxTokens = 1000 }) {
+  if (!aiOn()) throw new Error('No API key or proxy configured.');
+  if (aiBudgetLeft() <= 0) throw new Error('Daily call cap reached. Raise it in settings if you want more.');
+
+  const body = { model, max_tokens: maxTokens, system, messages };
+  const headers = { 'content-type': 'application/json' };
+  let url = state.ai.proxy;
+  if (!url) {
+    url = 'https://api.anthropic.com/v1/messages';
+    headers['x-api-key'] = state.ai.key;
+    headers['anthropic-version'] = '2023-06-01';
+    /* Anthropic requires this to be opted into explicitly for browser-origin
+       calls, because it means the key is present in the page. */
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+  }
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60000);
+  let res;
+  try {
+    res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: ctrl.signal });
+  } finally { clearTimeout(timer); }
+
+  const raw = await res.text();
+  if (!res.ok) {
+    let msg = raw.slice(0, 200);
+    try { const j = JSON.parse(raw); msg = (j.error && j.error.message) || msg; } catch {}
+    throw new Error('HTTP ' + res.status + ' — ' + msg);
+  }
+  const j = JSON.parse(raw);
+
+  const u = j.usage || {};
+  const price = AI.PRICES[model] || AI.PRICES['claude-haiku-4-5'];
+  const cost = ((u.input_tokens || 0) / 1e6) * price.in + ((u.output_tokens || 0) / 1e6) * price.out;
+  const sp = aiSpend();
+  sp.calls++; sp.cost += cost;
+  state.ai.spend = sp;
+  store.set('ai', state.ai);
+  renderAiStatus();
+
+  return (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+}
+
+/* Models are asked for JSON but not forced into it, so read it out tolerantly
+   rather than trusting the whole response to parse. */
+function looseJSON(text) {
+  if (!text) return null;
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(text.slice(a, b + 1)); } catch { return null; }
+}
+
+/* A compact, factual snapshot. This is the only thing Claude ever sees. */
+function snapshot() {
+  const h = headlineAnom(), ph = phaseOf(h);
+  const edge = warmPoolEdge();
+  return {
+    generated: new Date().toISOString(),
+    units: state.unit === 'f' ? 'fahrenheit' : 'celsius',
+    enso: {
+      nino34_anomaly_c: num(h) ? +h.toFixed(2) : null,
+      phase: ph.name,
+      strength: ph.strength || null,
+      warm_pool_east_edge_lon: num(edge) ? edge : null,
+    },
+    cities: MAIN().map(loc => {
+      const s2 = summarize(loc), v = liveVars(loc);
+      if (!s2 || !v) return { name: loc.name, data: 'not loaded' };
+      const ix = computeIndices(loc.region, v);
+      const m = momentumOf(loc);
+      const sk = skillOf(loc);
+      return {
+        name: loc.name, country: loc.country || null,
+        conditions: s2.label,
+        temp_now: +fx(T(s2.cur.temperature_2m), 0),
+        feels_peak_this_week: +fx(T(v.maxApp), 0),
+        vs_normal_deg: num(s2.tAnom) ? +dT(s2.tAnom).toFixed(1) : null,
+        rain_7d_mm: +fx(s2.p7, 1),
+        rain_pct_of_normal: num(s2.pPct) && s2.pPct < 999 ? Math.round(s2.pPct) : null,
+        indices: { drought: Math.round(ix.drought), flood: Math.round(ix.flood),
+                   heat: Math.round(ix.heat), fire: Math.round(ix.fire),
+                   disruption: Math.round(ix.disruption) },
+        momentum_vs_last_week: m && num(m.delta) ? Math.round(m.delta) : null,
+        enso_term_on_drought: +ix.dryPush.toFixed(1),
+        enso_confidence_here: lensOf(loc)[ph.key].conf,
+        forecast_accuracy_pct: sk ? Math.round(sk.overall) : null,
+        accuracy_sample: sk ? sk.n : 0,
+      };
+    }),
+    watch_items: buildAlerts().slice(0, 8).map(a => ({ title: a.title, detail: a.body })),
+    events_near_cities: ((state.crisis && state.crisis.items) || [])
+      .filter(e => num(e.kmSpot) && e.kmSpot <= 1200).slice(0, 6)
+      .map(e => ({ what: e.title, near: e.nearName, km: Math.round(e.kmSpot) })),
+    headlines: ((state.news && state.news.items) || []).slice(0, 15)
+      .map(i => ({ title: i.title, source: i.src })),
+  };
+}
+
+const AI_RULES =
+  'You are the analyst voice inside a live El Niño dashboard. You are given a JSON snapshot '
+  + 'produced by a deterministic model. Absolute rules:\n'
+  + '1. Every number you state must appear in the JSON. Never estimate, extrapolate or invent a figure. '
+  + 'If something is not in the JSON, say you do not have it.\n'
+  + '2. You are not forecasting. You are explaining what the data already says. Do not predict weather.\n'
+  + '3. The indices are a transparent heuristic, not a validated forecast model. Do not oversell them.\n'
+  + '4. Where enso_confidence_here is low, say the Pacific is not the main driver there rather than '
+  + 'implying an El Niño link.\n'
+  + '5. Plain, direct English. No filler, no hedging clichés, no bullet padding.';
+
+async function loadBriefing(force) {
+  if (!aiOn()) return;
+  const day = iso(new Date());
+  if (!force && state.ai.brief && state.ai.brief.day === day) return;
+
+  const txt = await askClaude({
+    model: AI.BRIEF_MODEL,
+    maxTokens: 1400,
+    system: AI_RULES + '\n\nReturn ONLY a JSON object, no prose around it, shaped exactly:\n'
+      + '{"headline": "one sentence, under 15 words",\n'
+      + ' "briefing": "2-4 sentences across the whole picture",\n'
+      + ' "cities": [{"name": "<exact name from the JSON>", "line": "one sentence on what matters there"}],\n'
+      + ' "news": [{"title": "<exact headline from the JSON>", "why": "one clause on why it matters to these cities"}]}\n'
+      + 'Include every city. Include at most 4 news items, only genuinely relevant ones; '
+      + 'omit the news array entirely if none are relevant.',
+    messages: [{ role: 'user', content: 'Todays snapshot:\n' + JSON.stringify(snapshot()) }],
+  });
+
+  const parsed = looseJSON(txt);
+  state.ai.brief = { day, data: parsed, raw: parsed ? null : txt, at: Date.now() };
+  store.set('ai', state.ai);
+  render();
+}
+
+async function askClaudeChat(question) {
+  const history = CONV.log.slice(-6).map(l => ({
+    role: l.who === 'you' ? 'user' : 'assistant', content: l.text,
+  })).filter(m => m.content);
+
+  return askClaude({
+    model: AI.CHAT_MODEL,
+    maxTokens: 700,
+    system: AI_RULES + '\n\nAnswer the question in 1-4 sentences using the snapshot below. '
+      + 'Speak directly to the person. If the snapshot cannot answer it, say so plainly.'
+      + '\n\nSNAPSHOT:\n' + JSON.stringify(snapshot()),
+    messages: [...history, { role: 'user', content: question }],
+  });
+}
+
+function renderBriefing() {
+  const el = $('#briefCard');
+  if (!el) return;
+  const b = state.ai.brief;
+  if (!aiOn() || !b) { el.hidden = true; return; }
+  el.hidden = false;
+
+  const d = b.data;
+  if (!d) {   // model did not return usable JSON — show what it did say
+    el.innerHTML = `<div class="row"><span class="byline">Written by Claude</span></div>
+      <div class="brief-body">${esc(b.raw || 'No briefing returned.')}</div>`;
+    return;
+  }
+  const cities = (d.cities || []).filter(c => c && c.name && c.line);
+  el.innerHTML = `
+    <div class="row wrap-w"><span class="byline">Written by Claude</span>
+      <span class="grow"></span>
+      <button class="chip-btn" id="briefRefresh">Rewrite</button></div>
+    ${d.headline ? `<div class="brief-head">${esc(d.headline)}</div>` : ''}
+    ${d.briefing ? `<div class="brief-body">${esc(d.briefing)}</div>` : ''}
+    ${cities.length ? `<div class="plain-list" style="margin-top:14px">${cities.map(c =>
+        `<li><span class="brief-city"><b>${esc(c.name)}.</b> ${esc(c.line)}</span></li>`).join('')}</div>` : ''}
+    <div class="skill">Claude was given the computed figures and asked to explain them. Every number
+      above comes from the model in this page, not from Claude.</div>`;
+}
+
+function renderBriefNews() {
+  const el = $('#briefNews');
+  if (!el) return;
+  const d = state.ai.brief && state.ai.brief.data;
+  const items = (d && d.news || []).filter(n => n && n.title);
+  if (!aiOn() || !items.length) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<div style="padding:16px 16px 0"><div class="row"><div class="h grow">What matters today</div>
+      <span class="byline">Claude</span></div></div>`
+    + items.map(n => `<div class="nrow"><span class="ndot"></span><div class="grow">
+        <b>${esc(n.title)}</b><div class="body">${esc(n.why || '')}</div></div></div>`).join('');
+}
+
+function renderAiStatus() {
+  const sp = aiSpend();
+  const el = $('#aiStatus');
+  if (el) el.textContent = aiOn()
+    ? `${sp.calls} call${sp.calls === 1 ? '' : 's'} today · about $${sp.cost.toFixed(3)} · ${aiBudgetLeft()} left in cap`
+    : 'Not connected — the dashboard runs fully without it.';
+  const btn = $('#aiBtn');
+  if (btn) btn.classList.toggle('on', aiOn());
 }
 
 /* ═══════════════ knowledge base ═══════════════════════════════════════════
@@ -4578,6 +4915,19 @@ function runCommand(raw) {
     return respond('Voice replies off. I will keep writing them here.'); }
   if (has('unmute', 'speak', 'talk to me')) { V.tts = true; store.set('tts', true); syncTts(); return respond('Voice replies on.'); }
   if (has('help', 'commands', 'what can you do')) return respond(HELP);
+  if (has('brief me', 'briefing', 'write a briefing')) {
+    if (!aiOn()) return respond('Connect an Anthropic key under “Claude” in the top bar and I will write you a daily briefing.');
+    setView('overview');
+    const b = state.ai.brief && state.ai.brief.data;
+    if (b) { focusOn('#briefCard'); return respond(`${b.headline || ''} ${b.briefing || ''}`.trim()); }
+    respond('Writing your briefing…');
+    loadBriefing(true).then(() => {
+      const d = state.ai.brief && state.ai.brief.data;
+      CONV.log.pop();
+      pushLog('jarvis', d ? `${d.headline || ''} ${d.briefing || ''}`.trim() : 'Briefing written — it is on the Overview tab.');
+    }).catch(err => { CONV.log.pop(); respond('Could not write it: ' + err.message); });
+    return;
+  }
   if (has('refresh', 'update', 'reload')) { refreshAll(); return respond('Refreshing all feeds.'); }
   if (has('fahrenheit')) { state.unit = 'f'; store.set('unit', 'f');
     $$('[data-unit]').forEach(x => x.classList.toggle('on', x.dataset.unit === 'f')); render();
@@ -4623,6 +4973,21 @@ function runCommand(raw) {
     goTo(subject, 'synth'); remember(metric, 'momentum');
     return respond(briefMomentum(subject));
   }
+  /* An open question can mention a place without being a request for that
+     place's readout. "Should I move my Bali trip to November" is a decision,
+     not a report, and the rules engine answering it with today's conditions
+     would be confidently beside the point. Hand those to Claude when it is
+     connected, before the location branch can claim them. */
+  const OPEN_Q = /\b(trip|travel|holiday|vacation|flight|fly|postpone|reschedule|cancel|book|is it worth|worth it|better to|do you think|what if i|help me decide|instead of|compared to last|versus last|last year|next year|next month|next week|historically|history)\b/;
+  if (aiOn() && (OPEN_Q.test(t) || t.includes(' ask claude '))) {
+    remember(metric, 'ask');
+    respond('Let me think about that one…');
+    askClaudeChat(raw)
+      .then(ans => { CONV.log.pop(); pushLog('jarvis', ans); speak(ans); })
+      .catch(err => { CONV.log.pop(); respond(`I could not reach Claude: ${err.message}`); });
+    return;
+  }
+
   const wantsWhy     = /\bwhy\b|\bhow come\b|what.s (driving|behind|causing)|what is (driving|behind|causing)/.test(t);
   const wantsWhat    = /\bwhat (is|are|does|do)\b|\bwhat.s\b|\bexplain\b|\bdefine\b|\bmean(s|ing)?\b|\btell me about\b|\bhow does\b|\bhow do you\b/.test(t);
   const wantsAdvice  = /\b(advise|advice|recommend|suggest|what should i|should i|what do i do|do about|prepare|mitigat|action)\b/.test(t);
@@ -4717,8 +5082,16 @@ function runCommand(raw) {
     return respond(describeVar(subject, metricExplicit)); }
   if (has('weather', 'forecast')) { remember(metric, 'report'); return respond(briefLoc(subject)); }
 
+  if (aiOn()) {
+    respond('Let me think about that one…');
+    askClaudeChat(raw)
+      .then(ans => { CONV.log.pop(); pushLog('jarvis', ans); speak(ans); })
+      .catch(err => { CONV.log.pop(); respond(`I could not reach Claude: ${err.message}`); });
+    return;
+  }
   return respond(`I did not follow “${raw}”. I can explain any number on this dashboard, say why it is what it is, `
-    + `compare two places, or advise on what to do. Say “help” for the full list.`);
+    + `compare two places, or advise on what to do. Say “help” for the full list. `
+    + `Connect an Anthropic key under “Claude” in the top bar and I can answer open questions too.`);
 }
 
 /* Ordered by where each place appears in the sentence, so "compare London and
@@ -4888,7 +5261,9 @@ function boot() {
     if (c) state.norm[keyOf(loc)] = c;
   }
   render();
-  refreshAll({ quiet: true });
+  refreshAll({ quiet: true }).then(() => {
+    if (aiOn()) loadBriefing().catch(e => console.warn('briefing failed:', e));
+  });
 }
 </script>
 </body>
