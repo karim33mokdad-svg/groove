@@ -62,6 +62,16 @@ screen.
 Any city can be searched and promoted to a main city — it is calibrated
 against its own 2010–2024 normals and observed history on the spot, so it is
 valid immediately rather than showing placeholders.
+- **News & alerts** — two panes. *Your alerts* are raised from the dashboard's
+  own data (thresholds crossed, momentum shifts, criteria firing, events near
+  a tracked city) and carry an unread state that persists per device, with an
+  unread count on the tab. Optional desktop notifications for high-severity
+  items while the page is open — a static page cannot wake a closed device,
+  and the toggle says so rather than implying otherwise. *Weather news* pulls
+  headlines from GDELT (three queries: El Niño, your cities plus a hazard
+  term, and general climate hazards) and ReliefWeb situation reports, deduped
+  by URL and filterable. Listed as published — not verified here, and a
+  headline is not a forecast.
 - **Map** — a Pacific-centred world map of the variables that actually drive
   El Niño: live sea-surface temperature sampled across the tropical Indian and
   Pacific oceans, the 28 °C warm pool outlined (its eastward reach along the

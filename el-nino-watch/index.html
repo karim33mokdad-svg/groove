@@ -492,6 +492,23 @@
     100%{box-shadow:0 0 0 14px rgba(63,201,255,0),0 0 0 rgba(63,201,255,0);}}
   h2.flash,#detailTitle.flash{color:var(--accent);text-shadow:0 0 22px rgba(63,201,255,.8);}
 
+  /* ---------- news & notifications ---------- */
+  .news-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start;}
+  .nrow{display:flex;gap:11px;padding:13px 16px;border-top:1px solid var(--line);align-items:flex-start;}
+  .nrow:first-child{border-top:none;}
+  .nrow.unread{background:linear-gradient(90deg,rgba(63,201,255,.07),transparent);}
+  .ndot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:none;background:var(--txt-3);}
+  .nrow.unread .ndot{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  .nrow.sev-3 .ndot{background:var(--hot);box-shadow:0 0 8px var(--hot);}
+  .nrow.sev-2 .ndot{background:var(--warn);}
+  .nrow b{font-size:13.5px;font-weight:650;display:block;line-height:1.4;}
+  .nrow .body{font-size:12.5px;color:var(--txt-2);margin-top:3px;line-height:1.45;}
+  .nrow .meta{font-family:var(--mono);font-size:10.5px;color:var(--txt-3);margin-top:5px;
+    display:flex;flex-wrap:wrap;gap:9px;letter-spacing:.05em;}
+  .nrow a.hl{color:var(--txt);font-size:13.5px;font-weight:650;line-height:1.4;display:block;}
+  .nrow a.hl:hover{color:var(--accent);text-decoration:none;}
+  @media(max-width:1000px){ .news-grid{grid-template-columns:minmax(0,1fr);} }
+
   /* ---------- scenario picker ---------- */
   .scen{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}
   .scen button{text-align:left;padding:14px;border:1px solid var(--line);border-radius:2px;
@@ -722,6 +739,7 @@
     <button data-view="overview" class="on" role="tab">Overview</button>
     <button data-view="crisis" role="tab">Crisis watch <span class="badge" id="crisisBadge" hidden>0</span></button>
     <button data-view="map" role="tab">Map</button>
+    <button data-view="news" role="tab">News <span class="badge" id="newsBadge" hidden>0</span></button>
     <button data-view="synth" role="tab">Synthesis</button>
     <button data-view="sim" role="tab">Simulator</button>
   </nav>
@@ -868,6 +886,53 @@
       <div style="padding:16px 16px 0"><div class="h">Wider ENSO-sensitive regions</div>
         <div class="xs dim">everything else the feeds are reporting</div></div>
       <div id="crisisFar"></div>
+    </section>
+  </div>
+</section>
+
+<!-- ══════════════ news & notifications ══════════════ -->
+<section class="view" id="v-news" role="tabpanel">
+  <div class="sec-title">
+    <h2>News &amp; alerts</h2>
+    <span class="note">What changed on your dashboard, and what the world is reporting</span>
+  </div>
+
+  <div class="news-grid">
+    <section class="card pad-0">
+      <div style="padding:16px 16px 0">
+        <div class="row wrap-w">
+          <div class="grow"><div class="h">Your alerts</div>
+            <div class="xs dim">Raised from your own data — new items are marked</div></div>
+          <button class="chip-btn" id="notifyBtn">Notify me</button>
+          <button class="chip-btn" id="markRead">Mark all read</button>
+        </div>
+        <div class="vwarn" id="notifyNote" hidden></div>
+      </div>
+      <div id="notifList"></div>
+    </section>
+
+    <section class="card pad-0">
+      <div style="padding:16px 16px 0">
+        <div class="row wrap-w">
+          <div class="grow"><div class="h">Weather news</div>
+            <div class="xs dim" id="newsNote">Updating automatically</div></div>
+          <button class="chip-btn" id="newsReload">Reload</button>
+        </div>
+        <div class="row wrap-w" style="gap:6px;margin-top:10px" id="newsFilters">
+          <button class="chip-btn on" data-nf="all">All</button>
+          <button class="chip-btn" data-nf="enso">El Niño</button>
+          <button class="chip-btn" data-nf="cities">My cities</button>
+          <button class="chip-btn" data-nf="hazard">Floods &amp; drought</button>
+        </div>
+      </div>
+      <div id="newsList"></div>
+      <div style="padding:0 16px 16px">
+        <p class="xs dim" style="line-height:1.55">
+          Headlines come from <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a>,
+          which indexes global news, and from <a href="https://reliefweb.int/" target="_blank" rel="noopener">ReliefWeb</a>.
+          They are listed as published — I do not verify them, and a headline is not a forecast.
+        </p>
+      </div>
     </section>
   </div>
 </section>
@@ -1362,6 +1427,10 @@ const state = {
   view: store.get('view') || 'overview',
   crisis: null,                           // { items, errors, at }
   crisisFilter: 'all',
+  news: null,                             // headline feed
+  newsFilter: 'all',
+  seen: store.get('seen') || {},          // notification ids already shown
+  notifyOn: store.get('notifyOn') || false,
   sst: null,                              // sampled ocean temperature grid
   mapLayers: store.get('mapLayers') || { sst:1, pool:1, nino:1, cities:1, events:1 },
   pinned: store.get('pinned') || [],      // watch-list ids promoted to main cities
@@ -1782,6 +1851,8 @@ function render() {
   renderRail();
   renderDetail();
   renderCrisis();
+  renderNews();
+  renderNotif();
   if (state.view === 'map') renderMap();
   if (state.view === 'synth') renderSynth();
   if ($('#simVars').children.length) { renderSimOut(); updateRuleTags(); }
@@ -2532,6 +2603,186 @@ function skillLine(loc) {
     + (s2.applied ? ` Running ${signed(s2.bias)}° ${s2.bias > 0 ? 'warm' : 'cool'}, now corrected for.` : '');
 }
 
+/* ═══════════════ news & notifications ═════════════════════════════════════
+   Two different things sharing one tab. Notifications are raised from this
+   dashboard's own data and carry an unread state. News is what the outside
+   world is publishing, listed as published and not verified here.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+const HAZARD_WORDS = '(flood OR flooding OR drought OR heatwave OR "heat wave" OR wildfire OR cyclone OR typhoon OR monsoon)';
+
+function newsQueries() {
+  const cities = MAIN().map(m => `"${m.name}"`).slice(0, 8).join(' OR ');
+  return [
+    { tag: 'enso',   q: '("el nino" OR "el niño" OR "la nina" OR "la niña") sourcelang:english' },
+    { tag: 'cities', q: `(${cities}) ${HAZARD_WORDS} sourcelang:english` },
+    { tag: 'hazard', q: `${HAZARD_WORDS} ("climate" OR "weather") sourcelang:english` },
+  ];
+}
+
+function gdeltDate(s2) {
+  if (!s2) return null;
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(s2);
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])).toISOString() : s2;
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const mins = (Date.now() - new Date(iso).getTime()) / 60000;
+  if (!isFinite(mins) || mins < 0) return '';
+  if (mins < 60) return Math.max(1, Math.round(mins)) + 'm ago';
+  if (mins < 1440) return Math.round(mins / 60) + 'h ago';
+  return Math.round(mins / 1440) + 'd ago';
+}
+
+async function loadNews(force) {
+  /* GDELT is free and unauthenticated; three queries on every 15-minute cycle
+     is more than it deserves for a feed that moves this slowly. */
+  if (!force && state.news && Date.now() - state.news.at < 25 * 60 * 1000) return;
+  const items = [], errors = [];
+
+  await Promise.all(newsQueries().map(async ({ tag, q }) => {
+    try {
+      const r = await fetchJSON('https://api.gdeltproject.org/api/v2/doc/doc'
+        + `?query=${encodeURIComponent(q)}&mode=artlist&maxrecords=25&sort=datedesc&format=json`,
+        { retries: 0, timeout: 20000 });
+      for (const a of (r.articles || [])) {
+        if (!a.url || !a.title) continue;
+        items.push({ tag, title: a.title, url: a.url, src: a.domain || 'news',
+          when: gdeltDate(a.seendate) });
+      }
+    } catch (e) { errors.push(`GDELT (${tag}): ${e.message || 'unreachable'}`); }
+  }));
+
+  /* ReliefWeb situation reports — slower moving, but authoritative */
+  try {
+    const r = await fetchJSON('https://api.reliefweb.int/v2/reports?appname=el-nino-watch'
+      + '&limit=15&sort%5B%5D=date%3Adesc'
+      + '&query%5Bvalue%5D=' + encodeURIComponent('"el nino" OR drought OR flood')
+      + '&query%5Bfields%5D%5B%5D=title', { retries: 0, timeout: 18000 });
+    for (const d of (r.data || [])) {
+      const f = (d && d.fields) || d || {};
+      if (!f.title && !f.name) continue;
+      items.push({ tag: 'hazard', title: f.title || f.name, url: f.url || d.href,
+        src: 'reliefweb.int',
+        when: f.date ? (f.date.created || f.date.changed || null) : null });
+    }
+  } catch (e) { errors.push('ReliefWeb reports: ' + (e.message || 'unreachable')); }
+
+  const seen = new Set();
+  const dedup = items.filter(i => (seen.has(i.url) ? false : (seen.add(i.url), true)));
+  dedup.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
+  state.news = { items: dedup.slice(0, 80), errors, at: Date.now() };
+  store.set('news', state.news);
+}
+
+function renderNews() {
+  const el = $('#newsList');
+  if (!el) return;
+  const n = state.news;
+  if (!n) { el.innerHTML = '<div class="empty">Loading headlines…</div>'; return; }
+
+  const f = state.newsFilter || 'all';
+  const list = n.items.filter(i => f === 'all' || i.tag === f);
+
+  const errRow = n.errors.length
+    ? `<div class="nrow"><span class="ndot"></span><div><b>Some sources did not respond</b>
+       <div class="meta"><span>${esc(n.errors.join(' · '))}</span></div></div></div>` : '';
+
+  el.innerHTML = errRow + (list.length ? list.slice(0, 50).map(i => `<div class="nrow">
+      <span class="ndot"></span>
+      <div class="grow" style="min-width:0">
+        <a class="hl" href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.title)}</a>
+        <div class="meta"><span>${esc(i.src)}</span>${i.when ? `<span>${esc(timeAgo(i.when))}</span>` : ''}
+          <span>${esc({ enso:'EL NIÑO', cities:'YOUR CITIES', hazard:'HAZARD' }[i.tag] || '')}</span></div>
+      </div>
+    </div>`).join('') : '<div class="empty">Nothing matching that filter right now.</div>');
+
+  $('#newsNote').textContent = n.at
+    ? `Updated ${timeAgo(new Date(n.at).toISOString()) || 'just now'} · refreshes automatically`
+    : 'Updating automatically';
+}
+
+/* ---- notifications raised from our own data ---- */
+
+function buildNotifications() {
+  const day = iso(new Date());
+  const out = [];
+  const add = (id, sev, title, body) => out.push({ id: id + '|' + day, sev, title, body, when: Date.now() });
+
+  const h = headlineAnom(), ph = phaseOf(h);
+  if (num(h) && ph.key !== 'neutral')
+    add(`enso|${ph.key}`, 2, `${ph.name} conditions`, `Niño 3.4 at ${signed(h)} °C — ${ph.strength.toLowerCase()}.`);
+
+  for (const a of buildAlerts())
+    add('alert|' + a.title.replace(/\s+/g, '-').toLowerCase(), a.sev, a.title, a.body);
+
+  for (const loc of MAIN()) {
+    const m = momentumOf(loc);
+    if (m && num(m.delta) && Math.abs(m.delta) >= 12)
+      add(`mom|${loc.id}`, 2, `${loc.name} is ${momentumWord(m.delta)}`,
+        `Conditions have moved ${signed(m.delta, 0)} points against the previous week.`);
+  }
+
+  for (const r of state.rules) {
+    const st = ruleStatus(r);
+    if (st.liveHits.length)
+      add(`rule|${r.id}`, 3, `Alert firing: ${r.name}`, `Live conditions meet it in ${st.liveHits.join(', ')}.`);
+  }
+
+  const near = ((state.crisis && state.crisis.items) || []).filter(e => num(e.kmSpot) && e.kmSpot <= 800);
+  for (const e of near.slice(0, 6))
+    add('ev|' + (e.url || e.title).slice(0, 60), 2, e.title,
+      `${(CAT_MAP[e.cat] || CAT_MAP.other).label} near ${e.nearName || 'a tracked city'}.`);
+
+  out.sort((a, b) => b.sev - a.sev);
+  return out.slice(0, 30);
+}
+
+function unreadNotifications() {
+  return buildNotifications().filter(n => !state.seen[n.id]);
+}
+
+function renderNotif() {
+  const el = $('#notifList');
+  if (!el) return;
+  const all = buildNotifications();
+  const unread = all.filter(n => !state.seen[n.id]);
+
+  const badge = $('#newsBadge');
+  if (badge) { badge.hidden = !unread.length; badge.textContent = unread.length; }
+
+  el.innerHTML = all.length ? all.map(n => {
+    const isNew = !state.seen[n.id];
+    return `<div class="nrow sev-${n.sev}${isNew ? ' unread' : ''}">
+      <span class="ndot"></span>
+      <div class="grow" style="min-width:0">
+        <b>${esc(n.title)}</b>
+        <div class="body">${esc(n.body)}</div>
+        <div class="meta">${isNew ? '<span style="color:var(--accent)">NEW</span>' : '<span>seen</span>'}
+          <span>${n.sev >= 3 ? 'HIGH' : n.sev >= 2 ? 'WATCH' : 'INFO'}</span></div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty">Nothing is crossing a threshold right now.</div>';
+
+  /* surface genuinely new, high-severity items to the OS if permitted */
+  if (state.notifyOn && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    for (const n of unread.filter(x => x.sev >= 3).slice(0, 3)) {
+      try { new Notification('El Niño Watch — ' + n.title, { body: n.body, tag: n.id }); } catch {}
+      state.seen[n.id] = Date.now();
+    }
+    store.set('seen', state.seen);
+  }
+}
+
+function markNotificationsRead() {
+  for (const n of buildNotifications()) state.seen[n.id] = Date.now();
+  const cutoff = Date.now() - 14 * 864e5;
+  for (const k of Object.keys(state.seen)) if (state.seen[k] < cutoff) delete state.seen[k];
+  store.set('seen', state.seen);
+  renderNotif();
+}
+
 /* ═══════════════ global map ═══════════════════════════════════════════════
    Equirectangular, rolled to put the Pacific in the middle where ENSO lives.
    The coastline is a simplified Natural Earth outline baked in at build time,
@@ -3169,6 +3420,7 @@ async function refreshAll({ quiet = false } = {}) {
       loadCrisis().catch(e => { console.warn('crisis feeds failed:', e); }),
       loadHistory().catch(e => { console.warn('history fetch failed:', e); }),
       loadSST().catch(e => { console.warn('ocean grid failed:', e); }),
+      loadNews().catch(e => { console.warn('news feed failed:', e); }),
     ]);
     verifyForecasts();
     logForecasts();
@@ -3335,6 +3587,41 @@ $('#results').addEventListener('click', e => {
     const l = locById(loc.id);
     respond(`${l.name} added and calibrated. ${(plainSummary(l) || {}).headline || ''}`);
   });
+});
+
+/* news & notifications */
+document.addEventListener('click', async e => {
+  const nf = e.target.closest('[data-nf]');
+  if (nf) {
+    state.newsFilter = nf.dataset.nf;
+    $$('#newsFilters .chip-btn').forEach(x => x.classList.toggle('on', x === nf));
+    renderNews();
+    return;
+  }
+  if (e.target.closest('#newsReload')) {
+    $('#newsList').innerHTML = '<div class="empty">Reloading…</div>';
+    await loadNews(true).catch(() => {});
+    renderNews();
+    return;
+  }
+  if (e.target.closest('#markRead')) { markNotificationsRead(); return; }
+  if (e.target.closest('#notifyBtn')) {
+    const note = $('#notifyNote');
+    if (typeof Notification === 'undefined') {
+      note.hidden = false;
+      note.textContent = 'This browser does not support desktop notifications.';
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    state.notifyOn = perm === 'granted';
+    store.set('notifyOn', state.notifyOn);
+    $('#notifyBtn').classList.toggle('on', state.notifyOn);
+    note.hidden = false;
+    note.textContent = state.notifyOn
+      ? 'On. I will raise a notification for high-severity items while this page is open in a tab. A page like this cannot wake your device when it is closed — that needs a server behind it.'
+      : 'Notifications were not granted, so alerts will only appear here on the page.';
+    return;
+  }
 });
 
 /* map */
@@ -4272,6 +4559,20 @@ function runCommand(raw) {
   }
 
   /* views */
+  if (has('news', 'headlines', 'what are they saying', 'press')) {
+    setView('news'); remember(metric, 'news');
+    const n = state.news;
+    if (!n || !n.items.length) return respond('No headlines have loaded yet.');
+    const unread = unreadNotifications().length;
+    return respond(`${n.items.length} headlines loaded. Latest: ${n.items[0].title}, from ${n.items[0].src}.`
+      + (unread ? ` You also have ${unread} unread alert${unread === 1 ? '' : 's'}.` : ''));
+  }
+  if (has('notification', 'unread', 'anything new', 'what changed')) {
+    setView('news'); remember(metric, 'notif');
+    const u = unreadNotifications();
+    if (!u.length) return respond('Nothing new since you last looked.');
+    return respond(`${u.length} new item${u.length === 1 ? '' : 's'}. Top: ${u[0].title}. ${u[0].body}`);
+  }
   if (has('crisis', 'emergency', 'disaster', 'events', 'incidents')) {
     setView('crisis'); focusOn('#crisisNear'); remember(metric, 'crisis');
     return respond(briefCrisis());
@@ -4459,6 +4760,8 @@ function boot() {
   const cachedCrisis = store.get('crisis', 6 * 3600e3);
   const cachedSst = store.get('sst', 12 * 3600e3);
   if (cachedSst) state.sst = cachedSst;
+  const cachedNews = store.get('news', 3 * 3600e3);
+  if (cachedNews) state.news = cachedNews;
   if (cachedFc) { state.fc = cachedFc; state.fetchedAt = store.get('fetchedAt') || null; }
   if (cachedEnso) state.enso = cachedEnso;
   if (cachedCrisis) state.crisis = cachedCrisis;
