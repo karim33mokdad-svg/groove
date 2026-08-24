@@ -122,7 +122,7 @@
   .sens .lv{font-size:11px;color:var(--txt-3);width:52px;text-align:right;flex:none;}
 
   /* ---------- spotlight ---------- */
-  .spots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;}
+  .spots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;}
   .spot{position:relative;text-align:left;background:var(--panel);border:1px solid var(--line);
     border-radius:var(--r);padding:14px;transition:.18s;overflow:hidden;}
   .spot:hover{border-color:#3c4149;transform:translateY(-2px);}
@@ -221,6 +221,9 @@
   .fld input{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;
     color:var(--txt);padding:10px 12px;font-size:14px;}
 
+  @media(max-width:1500px){
+    .spots{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
   @media(max-width:1400px){
     .enso{grid-template-columns:minmax(260px,320px) minmax(0,1fr);}
     .enso .sens-card{grid-column:1/-1;}
@@ -808,7 +811,7 @@
       below — temperature against normal, rainfall against normal, humidity, wind, and the ENSO phase weighted
       by each region's real teleconnection strength — into 0–100 indices. Every contributing term is listed so
       you can see exactly why a number moved, and disagree with it. Regions where ENSO is a weak predictor
-      (Lebanon, Türkiye) get a correspondingly small ENSO term by design.
+      (Lebanon, Türkiye, the UK) get a correspondingly small ENSO term by design.
     </p>
   </div>
   <div id="synthList"></div>
@@ -957,6 +960,11 @@ const SPOTLIGHTS = [
            {name:'İzmir',lat:38.4237,lon:27.1428},
            {name:'Antalya',lat:36.8969,lon:30.7133},
            {name:'Trabzon',lat:41.0027,lon:39.7168} ] },
+  { id:'london', name:'London', country:'United Kingdom', lat:51.5074, lon:-0.1278, region:'uk',
+    area:[ {name:'Manchester',lat:53.4808,lon:-2.2426},
+           {name:'Birmingham',lat:52.4862,lon:-1.8904},
+           {name:'Edinburgh',lat:55.9533,lon:-3.1883},
+           {name:'Cardiff',lat:51.4816,lon:-3.1791} ] },
 ];
 
 /* Global ENSO-sensitive reference points, seeded into the watch list. */
@@ -1069,6 +1077,24 @@ const LENS = {
       pts:['Plan on climatology and track the medium-range forecast.',
            'Istanbul\'s main weather risks — snow disruption, heavy autumn rain, summer heat — are all independent of ENSO.'] },
     watch:['Reservoir levels, Istanbul and Anatolia','Winter snow disruption','Summer heatwaves, Jul–Aug'] },
+
+  uk:{
+    title:'United Kingdom / London', sensitivity:2,
+    elnino:{ conf:'low',
+      text:'The UK sits at the far end of the ENSO chain, and the signal is weak, lagged and easily overwhelmed. The best-documented pathway is stratospheric: El Niño winters slightly favour a disturbed polar vortex and a negative North Atlantic Oscillation in late winter, nudging Britain toward blocked, colder and drier spells while Atlantic storms track further south. Early winter often leans the other way, milder and wetter. Against the NAO\'s own year-to-year swings this is a nudge, not a forecast.',
+      pts:['Treat this as background only — the operative horizon for British weather is the 5 to 10 day forecast, and the NAO and jet position matter far more than the Pacific.',
+           'If a blocked, colder late winter does materialise, the exposure is heating demand and cold-snap disruption to transport, not flooding.',
+           'A southward-shifted storm track eases flood risk in Scotland and the north-west while raising it across southern England.'] },
+    lanina:{ conf:'low',
+      text:'La Niña winters lean toward a positive North Atlantic Oscillation and a stronger, more northward Atlantic jet — milder, wetter and stormier for the UK, with the storm track aimed at Scotland, Northern Ireland and north-west England. The tendency shows up in composites but is small, and individual winters scatter widely.',
+      pts:['Plan for storm and flood disruption in the north and west through Oct–Feb rather than cold-snap risk.',
+           'Milder means lower heating demand but more wind-driven disruption to aviation, rail and offshore work.',
+           'Ground saturated early in the season magnifies the impact of any single later storm.'] },
+    neutral:{ conf:'low',
+      text:'With ENSO neutral there is effectively no Pacific steer on British weather. The winter is decided by the North Atlantic Oscillation, the position of the Atlantic jet, and whether a sudden stratospheric warming occurs — none of which is predictable more than two to three weeks ahead.',
+      pts:['Plan on climatology and the medium-range forecast; ignore the ENSO framing for the UK entirely in this phase.',
+           'Summer heat extremes here are driven far more by the long-run warming trend than by anything in the Pacific.'] },
+    watch:['Atlantic storm season, Oct–Feb','Cold snaps and stratospheric warming, Jan–Feb','Summer heatwaves, Jun–Aug'] },
 
   generic:{
     title:'Global watch point', sensitivity:3,
@@ -1982,6 +2008,7 @@ const ENSO_FX = {
   thailand:  { dry:  0.95, heat: 0.60, conf: 1.00 },
   levant:    { dry: -0.15, heat: 0.05, conf: 0.25 },
   turkey:    { dry: -0.20, heat: 0.05, conf: 0.30 },
+  uk:        { dry:  0.20, heat: 0.05, conf: 0.20 },
   generic:   { dry:  0.00, heat: 0.00, conf: 0.20 },
 };
 
@@ -2204,7 +2231,7 @@ function parseReliefWeb(json) {
   return out;
 }
 
-const TRACKED_COUNTRIES = ['emirates','indonesia','thailand','lebanon','türkiye','turkey'];
+const TRACKED_COUNTRIES = ['emirates','indonesia','thailand','lebanon','türkiye','turkey','united kingdom'];
 
 async function loadCrisis() {
   const items = [], errors = [];
@@ -3044,9 +3071,9 @@ const GLOSSARY = {
   enso: { term:'ENSO',
     text:'E N S O is the El Niño Southern Oscillation — the back-and-forth of ocean temperature and atmospheric pressure across the tropical Pacific. In El Niño the warm pool slides east and the Walker circulation weakens, which shifts where the world\'s deep convection sits. That is why a temperature change in the Pacific dries out Indonesia and floods parts of Peru. La Niña is the opposite phase. Neutral is neither.' },
   teleconnection: { term:'a teleconnection',
-    text:'A teleconnection is a reliable statistical link between conditions in one part of the world and weather in a distant one. Indonesia and Thailand have strong, physically well-understood teleconnections to E N S O. Lebanon and Türkiye barely have one — their winters are governed by the North Atlantic Oscillation and the Mediterranean storm track. This dashboard scales the E N S O contribution by both the strength and the confidence of each region\'s link, so weak-signal places get a near-zero E N S O term by construction rather than by footnote.' },
+    text:'A teleconnection is a reliable statistical link between conditions in one part of the world and weather in a distant one. Indonesia and Thailand have strong, physically well-understood teleconnections to E N S O. Lebanon, Türkiye and the United Kingdom barely have one — their winters are governed by the North Atlantic Oscillation and the Mediterranean and Atlantic storm tracks. This dashboard scales the E N S O contribution by both the strength and the confidence of each region\'s link, so weak-signal places get a near-zero E N S O term by construction rather than by footnote.' },
   confidence: { term:'the confidence rating',
-    text:'Confidence says how much the E N S O signal is worth leaning on in that region. High means the relationship is strong and consistent across events — Indonesia and Thailand. Moderate means real but noisier — the Gulf. Low means the sample is small, the physical link is weak, or other drivers dominate — Lebanon and Türkiye. Low confidence is not a hedge; it is the finding.' },
+    text:'Confidence says how much the E N S O signal is worth leaning on in that region. High means the relationship is strong and consistent across events — Indonesia and Thailand. Moderate means real but noisier — the Gulf. Low means the sample is small, the physical link is weak, or other drivers dominate — Lebanon, Türkiye and the UK. Low confidence is not a hedge; it is the finding.' },
   disruption: { term:'the disruption index',
     text:'Disruption is the composite. It takes sixty percent from the single worst risk and forty percent from the average of all four, so one severe hazard drives it up but several moderate ones also register. Scale: below twenty five is low, twenty five to forty five moderate, forty five to seventy elevated, above seventy high.' },
   drought: { term:'the drought index',
@@ -3310,6 +3337,8 @@ const LOC_ALIASES = {
   thailand:  ['thailand','bangkok','thai','chiang mai','phuket'],
   beirut:    ['beirut','lebanon','lebanese','bekaa','tripoli'],
   istanbul:  ['istanbul','turkey','turkiye','türkiye','ankara','izmir'],
+  london:    ['london',' uk ',' u k ','united kingdom','britain','british','england',
+              'manchester','edinburgh','birmingham','cardiff'],
 };
 
 function findLocation(t) {
@@ -3366,7 +3395,7 @@ function briefAlerts() {
 
 const HELP = 'I can do four kinds of thing. One: report — status, alerts, crisis, how bad is Bali. '
   + 'Two: explain — what is the drought index, what does O N I mean, how does the risk model work. '
-  + 'Three: reason — why is disruption high in Bangkok, when does it peak, compare Bali and Thailand, '
+  + 'Three: reason — why is disruption high in Bangkok, when does it peak, compare London and Bali, '
   + 'what should I do. Four: control — open synthesis, simulate strong El Niño, set El Niño to two, '
   + 'rainfall to forty percent, celsius, refresh, mute, stop listening. '
   + 'I keep track of what we were discussing, so you can just say “why?” or “what about Beirut?” and '
@@ -3578,14 +3607,22 @@ function runCommand(raw) {
     + `compare two places, or advise on what to do. Say “help” for the full list.`);
 }
 
+/* Ordered by where each place appears in the sentence, so "compare London and
+   Bali" leads with London rather than with whatever comes first in the config. */
 function findAllLocations(t) {
-  const out = [];
-  for (const [id, words] of Object.entries(LOC_ALIASES))
-    if (words.some(w => t.includes(w))) {
-      const s = SPOTLIGHTS.find(x => x.id === id);
-      if (s && !out.some(o => o.id === s.id)) out.push(s);
+  const hits = [];
+  for (const [id, words] of Object.entries(LOC_ALIASES)) {
+    let at = Infinity;
+    for (const w of words) {
+      const i = t.indexOf(w);
+      if (i >= 0 && i < at) at = i;
     }
-  return out;
+    if (at < Infinity) {
+      const loc = SPOTLIGHTS.find(x => x.id === id);
+      if (loc) hits.push({ loc, at });
+    }
+  }
+  return hits.sort((a, b) => a.at - b.at).map(h => h.loc);
 }
 
 /* Select a place, switch to the right tab, and scroll it into view. */

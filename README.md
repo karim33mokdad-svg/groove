@@ -8,8 +8,9 @@ Open the file in a browser (or serve the folder over HTTP). It is a single
 self-contained page: no build step, no dependencies, no API keys, no server.
 
 **Spotlight locations:** Dubai (UAE), Bali (Indonesia), Bangkok (Thailand),
-Beirut (Lebanon) and Istanbul (Türkiye) — each with the rest of its country
-alongside. Any other city can be added to the watch list via search.
+Beirut (Lebanon), Istanbul (Türkiye) and London (UK) — each with the rest of
+its country alongside. Any other city can be added to the watch list via
+search.
 
 **What it shows**
 
@@ -22,8 +23,8 @@ alongside. Any other city can be added to the watch list via search.
   rather than a feeling.
 - An El Niño lens per region: what the current phase typically means there,
   with an explicit confidence level, plus the operational implications.
-  Indonesia and Thailand carry strong signals; Lebanon and Türkiye are
-  labelled weak, because they are.
+  Indonesia and Thailand carry strong signals; Lebanon, Türkiye and the UK
+  are labelled weak, because they are.
 - A live watch strip: heat, heavy rain, damaging wind and large anomalies
   across everything being tracked.
 
