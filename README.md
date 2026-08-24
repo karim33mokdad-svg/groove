@@ -62,11 +62,21 @@ screen.
 Any city can be searched and promoted to a main city — it is calibrated
 against its own 2010–2024 normals and observed history on the spot, so it is
 valid immediately rather than showing placeholders.
-- **Simulator** — set ONI, rainfall, temperature anomaly, humidity, wind,
-  peak rain and horizon, and see the indices recompute for every region.
-  Define criteria ("ONI at or above 1.0 AND rainfall at or below 70% of
-  normal") and each is evaluated against both the simulated values and live
-  conditions right now. Criteria persist in the browser.
+- **Map** — a Pacific-centred world map of the variables that actually drive
+  El Niño: live sea-surface temperature sampled across the tropical Indian and
+  Pacific oceans, the 28 °C warm pool outlined (its eastward reach along the
+  equator is the classic signature of a warm event), the Niño 3.4 box, your
+  cities coloured by risk, and live fire and flood events plotted where they
+  are happening. Tap any ocean cell for its temperature, any event for its
+  name, any city to open it. The coastline is a simplified Natural Earth
+  outline baked into the page, so the map needs no tile server and no library.
+- **What if?** — pick a scenario (today's real conditions, strong El Niño,
+  strong La Niña, neutral) or move a single El Niño strength dial, and get a
+  plain-language answer: which city would be hardest hit, what the problem
+  would be, and which of your alerts would fire. The individual condition
+  sliders are still there under *Adjust the individual conditions* for anyone
+  who wants them. Alerts are evaluated against both the scenario and live
+  conditions right now, and persist in the browser.
 
 The risk model is a transparent heuristic, not a validated forecast model.
 It is built for comparing scenarios, not for predicting outcomes.
