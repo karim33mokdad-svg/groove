@@ -51,10 +51,23 @@ search.
   unread count on the tab. Optional desktop notifications for high-severity
   items while the page is open — a static page cannot wake a closed device,
   and the toggle says so rather than implying otherwise. *Weather news* pulls
-  headlines from GDELT (three queries: El Niño, your cities plus a hazard
-  term, and general climate hazards) and ReliefWeb situation reports, deduped
-  by URL and filterable. Listed as published — not verified here, and a
-  headline is not a forecast.
+  headlines from publisher RSS (ReliefWeb, BBC science & environment, Guardian
+  environment, NOAA climate.gov), from GDELT's targeted queries, and from the
+  observed-event feed already on the dashboard — so the panel still says
+  something when outside sources are blocked. Deduped by URL and by headline,
+  filtered to on-topic stories, and listed as published: not verified here,
+  and a headline is not a forecast.
+
+  Feeds that send no CORS headers cannot be read by a browser directly, so
+  those requests fall back to a public read-only relay. That means they pass
+  through a third party — news feeds only, nothing else on the page — and the
+  panel says so. The transport that worked last time is remembered so the
+  blocked path is not retried indefinitely.
+
+  ReliefWeb's JSON API rejects unapproved appnames with HTTP 403, so the
+  default is their public RSS, which needs no approval. Paste an approved
+  appname into the field on the news tab and both the news and crisis feeds
+  switch to the API from the next refresh.
 - **Map** — a Pacific-centred world map of the variables that actually drive
   El Niño: live sea-surface temperature sampled across the tropical Indian and
   Pacific oceans, the 28 °C warm pool outlined (its eastward reach along the

@@ -927,8 +927,14 @@
       </div>
       <div id="newsList"></div>
       <div style="padding:0 16px 16px">
-        <p class="xs dim" style="line-height:1.55">
-          Headlines come from <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a>,
+        <label class="fld" style="margin-top:4px"><span>ReliefWeb app name (once they approve yours)</span>
+          <input id="rwApp" type="text" placeholder="not set — using their public RSS instead"
+            autocomplete="off"></label>
+        <p class="xs dim" style="line-height:1.55;margin-top:12px">
+          Feeds that block cross-origin reads are fetched through a public read-only relay, so those
+          requests pass through a third party. That applies to news feeds only, and to nothing else on
+          this page. Headlines come from publisher RSS,
+          <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a>,
           which indexes global news, and from <a href="https://reliefweb.int/" target="_blank" rel="noopener">ReliefWeb</a>.
           They are listed as published — I do not verify them, and a headline is not a forecast.
         </p>
@@ -1318,6 +1324,66 @@ const store = {
   del(k)    { try { localStorage.removeItem('enw:' + k); } catch {} },
 };
 
+/* Some feeds (GDELT, most RSS) send no CORS headers, so a browser cannot read
+   them directly. Where that happens we fall back to a public read-only relay.
+   That means those requests pass through a third party — fine for public news
+   feeds, and never used for anything else in this page. The transport that
+   worked last time is remembered, so the failing path is not retried forever. */
+const RELAYS = [
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+];
+
+async function fetchVia(url, as = 'json', timeout = 14000) {
+  const direct = u => u;
+  const pref = store.get('transport');
+  const order = pref === 'relay' ? [...RELAYS, direct] : [direct, ...RELAYS];
+  let last = 'unreachable';
+  for (const make of order) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const res = await fetch(make(url), { signal: ctrl.signal });
+      clearTimeout(t);
+      const body = await res.text();
+      if (!res.ok) {
+        let msg = body.slice(0, 160);
+        try { const j = JSON.parse(body); msg = (j.error && (j.error.message || j.error.description)) || msg; } catch {}
+        throw new Error('HTTP ' + res.status + ' — ' + msg);
+      }
+      store.set('transport', make === direct ? 'direct' : 'relay');
+      return as === 'json' ? JSON.parse(body) : body;
+    } catch (e) {
+      clearTimeout(t);
+      last = (e && e.message) || 'blocked';
+    }
+  }
+  throw new Error(last);
+}
+
+/* RSS and Atom both, without assuming which one a publisher uses. */
+function parseFeed(xml, source) {
+  const out = [];
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) return out;
+    const nodes = [...doc.getElementsByTagName('item'), ...doc.getElementsByTagName('entry')];
+    for (const n of nodes) {
+      const pick = tag => { const e = n.getElementsByTagName(tag)[0]; return e ? e.textContent.trim() : ''; };
+      const title = pick('title');
+      let url = '';
+      const linkEl = n.getElementsByTagName('link')[0];
+      if (linkEl) url = linkEl.getAttribute('href') || linkEl.textContent.trim();
+      if (!url) url = pick('guid');
+      const when = pick('pubDate') || pick('published') || pick('updated') || pick('date');
+      if (!title || !url) continue;
+      const d = when ? new Date(when) : null;
+      out.push({ title, url, src: source, when: d && !isNaN(d) ? d.toISOString() : null });
+    }
+  } catch { /* malformed feed — skip it rather than break the panel */ }
+  return out;
+}
+
 async function fetchJSON(url, { timeout = 25000, retries = 2 } = {}) {
   let last;
   for (let a = 0; a <= retries; a++) {
@@ -1427,6 +1493,7 @@ const state = {
   view: store.get('view') || 'overview',
   crisis: null,                           // { items, errors, at }
   crisisFilter: 'all',
+  rwAppname: store.get('rwAppname') || '',// approved ReliefWeb appname, once granted
   news: null,                             // headline feed
   newsFilter: 'all',
   seen: store.get('seen') || {},          // notification ids already shown
@@ -2635,42 +2702,63 @@ function timeAgo(iso) {
   return Math.round(mins / 1440) + 'd ago';
 }
 
+/* Publisher feeds that do not need a key. ReliefWeb's RSS needs no approved
+   appname either, which is what makes it usable while an appname is pending. */
+const FEEDS = [
+  { url:'https://reliefweb.int/updates/rss.xml',                        src:'reliefweb.int', tag:'hazard' },
+  { url:'https://feeds.bbci.co.uk/news/science_and_environment/rss.xml', src:'bbc.co.uk',     tag:'hazard' },
+  { url:'https://www.theguardian.com/environment/rss',                  src:'theguardian.com', tag:'hazard' },
+  { url:'https://www.climate.gov/feeds/news-features.rss',              src:'climate.gov',   tag:'enso' },
+];
+
+const ENSO_RE = /el\s*ni[nñ]o|la\s*ni[nñ]a|enso|southern oscillation|pacific/i;
+const HAZ_RE = /flood|drought|heatwave|heat wave|wildfire|cyclone|typhoon|hurricane|monsoon|storm|famine|water shortage|climate/i;
+
+function classify(title) {
+  if (ENSO_RE.test(title)) return 'enso';
+  const cityRe = new RegExp(MAIN().map(m => m.name).concat(
+    MAIN().map(m => m.country).filter(Boolean)).join('|'), 'i');
+  if (cityRe.test(title)) return 'cities';
+  return 'hazard';
+}
+
 async function loadNews(force) {
-  /* GDELT is free and unauthenticated; three queries on every 15-minute cycle
-     is more than it deserves for a feed that moves this slowly. */
   if (!force && state.news && Date.now() - state.news.at < 25 * 60 * 1000) return;
   const items = [], errors = [];
 
-  await Promise.all(newsQueries().map(async ({ tag, q }) => {
+  /* Publisher feeds, each failing independently. Observed events are folded in
+     at render time instead of here, because loadCrisis runs concurrently and
+     has not necessarily finished yet. */
+  await Promise.all(FEEDS.map(async f => {
     try {
-      const r = await fetchJSON('https://api.gdeltproject.org/api/v2/doc/doc'
-        + `?query=${encodeURIComponent(q)}&mode=artlist&maxrecords=25&sort=datedesc&format=json`,
-        { retries: 0, timeout: 20000 });
-      for (const a of (r.articles || [])) {
-        if (!a.url || !a.title) continue;
-        items.push({ tag, title: a.title, url: a.url, src: a.domain || 'news',
-          when: gdeltDate(a.seendate) });
+      const rows = parseFeed(await fetchVia(f.url, 'text'), f.src);
+      if (!rows.length) throw new Error('no items parsed');
+      for (const r of rows) {
+        if (!ENSO_RE.test(r.title) && !HAZ_RE.test(r.title)) continue;   // keep it on-topic
+        items.push({ ...r, tag: classify(r.title) });
       }
-    } catch (e) { errors.push(`GDELT (${tag}): ${e.message || 'unreachable'}`); }
+    } catch (e) { errors.push(`${f.src}: ${e.message || 'unreachable'}`); }
   }));
 
-  /* ReliefWeb situation reports — slower moving, but authoritative */
-  try {
-    const r = await fetchJSON('https://api.reliefweb.int/v2/reports?appname=el-nino-watch'
-      + '&limit=15&sort%5B%5D=date%3Adesc'
-      + '&query%5Bvalue%5D=' + encodeURIComponent('"el nino" OR drought OR flood')
-      + '&query%5Bfields%5D%5B%5D=title', { retries: 0, timeout: 18000 });
-    for (const d of (r.data || [])) {
-      const f = (d && d.fields) || d || {};
-      if (!f.title && !f.name) continue;
-      items.push({ tag: 'hazard', title: f.title || f.name, url: f.url || d.href,
-        src: 'reliefweb.int',
-        when: f.date ? (f.date.created || f.date.changed || null) : null });
-    }
-  } catch (e) { errors.push('ReliefWeb reports: ' + (e.message || 'unreachable')); }
+  /* GDELT last: its targeted queries are the best source when it is
+        reachable, but it sends no CORS headers so it needs the relay. */
+  await Promise.all(newsQueries().map(async ({ tag, q }) => {
+    try {
+      const r = await fetchVia('https://api.gdeltproject.org/api/v2/doc/doc'
+        + `?query=${encodeURIComponent(q)}&mode=artlist&maxrecords=20&sort=datedesc&format=json`, 'json');
+      for (const a of (r.articles || [])) {
+        if (!a.url || !a.title) continue;
+        items.push({ tag, title: a.title, url: a.url, src: a.domain || 'news', when: gdeltDate(a.seendate) });
+      }
+    } catch (e) { errors.push(`gdelt (${tag}): ${e.message || 'blocked'}`); }
+  }));
 
-  const seen = new Set();
-  const dedup = items.filter(i => (seen.has(i.url) ? false : (seen.add(i.url), true)));
+  const seenU = new Set(), seenT = new Set();
+  const dedup = items.filter(i => {
+    const t = i.title.toLowerCase().slice(0, 70);
+    if (seenU.has(i.url) || seenT.has(t)) return false;
+    seenU.add(i.url); seenT.add(t); return true;
+  });
   dedup.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
   state.news = { items: dedup.slice(0, 80), errors, at: Date.now() };
   store.set('news', state.news);
@@ -2682,12 +2770,28 @@ function renderNews() {
   const n = state.news;
   if (!n) { el.innerHTML = '<div class="empty">Loading headlines…</div>'; return; }
 
+  /* Events already on the dashboard count as news, and they come from a feed
+     that works, so the panel still says something when publishers are blocked. */
+  const fromEvents = ((state.crisis && state.crisis.items) || []).slice(0, 12)
+    .filter(e => e.title)
+    .map(e => ({ tag: num(e.kmSpot) && e.kmSpot <= 1200 ? 'cities' : 'hazard',
+      title: e.title, url: e.url || 'https://eonet.gsfc.nasa.gov/',
+      src: e.src === 'EONET' ? 'nasa eonet' : 'reliefweb.int', when: e.when }));
+
+  const seenT = new Set();
+  const all = fromEvents.concat(n.items).filter(i => {
+    const k = i.title.toLowerCase().slice(0, 70);
+    return seenT.has(k) ? false : (seenT.add(k), true);
+  }).sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
+
   const f = state.newsFilter || 'all';
-  const list = n.items.filter(i => f === 'all' || i.tag === f);
+  const list = all.filter(i => f === 'all' || i.tag === f);
 
   const errRow = n.errors.length
-    ? `<div class="nrow"><span class="ndot"></span><div><b>Some sources did not respond</b>
-       <div class="meta"><span>${esc(n.errors.join(' · '))}</span></div></div></div>` : '';
+    ? `<details class="nrow" style="display:block"><summary class="more">
+         ${list.length ? `${n.errors.length} source${n.errors.length === 1 ? '' : 's'} unavailable`
+                       : 'No source responded — details'}</summary>
+       <div class="meta" style="margin-top:8px">${esc(n.errors.join(' · '))}</div></details>` : '';
 
   el.innerHTML = errRow + (list.length ? list.slice(0, 50).map(i => `<div class="nrow">
       <span class="ndot"></span>
@@ -3063,43 +3167,40 @@ async function loadCrisis() {
     })
     .catch(e => errors.push('NASA EONET: ' + (e.message || 'unreachable')));
 
-  /* ReliefWeb decommissioned the v1 API (HTTP 410), so this targets v2 and walks
-     a chain from most specific to most minimal — if the field or sort syntax has
-     moved, the bare query still returns rows. Whatever comes back is parsed
-     tolerantly, because the exact v2 envelope could not be verified offline. */
-  const RW_BASE = 'https://api.reliefweb.int/v2/disasters?appname=el-nino-watch&limit=40';
-  const RW_TRIES = [
-    RW_BASE + '&sort%5B%5D=date%3Adesc'
-      + '&fields%5Binclude%5D%5B%5D=name&fields%5Binclude%5D%5B%5D=date'
-      + '&fields%5Binclude%5D%5B%5D=country&fields%5Binclude%5D%5B%5D=type'
-      + '&fields%5Binclude%5D%5B%5D=url&fields%5Binclude%5D%5B%5D=status',
-    RW_BASE + '&sort%5B%5D=date%3Adesc',
-    RW_BASE,
-  ];
-
+  /* ReliefWeb's JSON API rejects unapproved appnames with HTTP 403, and an
+     appname has to be requested from them. Their RSS needs no approval, so
+     that is the default; the API is used only once a real appname is saved. */
   const relief = (async () => {
-    let lastErr = null;
-    for (const url of RW_TRIES) {
+    const app = (state.rwAppname || '').trim();
+    if (app) {
       try {
-        const rows = parseReliefWeb(await fetchJSON(url, { retries: 0, timeout: 18000 }));
-        if (rows.length) {
-          for (const r of rows) {
-            const cat = rwCategory(r.type + ' ' + r.name);
-            if (cat === 'other' && !r.type) continue;
-            const match = r.countries.some(c =>
-              TRACKED_COUNTRIES.some(t => c.toLowerCase().includes(t)));
-            items.push({ src: 'ReliefWeb', cat, title: r.name,
-              place: r.countries.join(', '), when: r.when, url: r.url,
-              km: match ? 0 : null, kmSpot: match ? 0 : null,
-              nearName: match ? r.countries[0] : null });
-          }
-          return;
-        }
-        lastErr = 'returned no usable records';
-      } catch (e) { lastErr = (e.message || 'unreachable'); }
+        const rows = parseReliefWeb(await fetchVia(
+          'https://api.reliefweb.int/v2/disasters?appname=' + encodeURIComponent(app)
+          + '&limit=40&sort%5B%5D=date%3Adesc&profile=list', 'json'));
+        if (rows.length) { pushReliefRows(rows); return; }
+      } catch (e) { errors.push('ReliefWeb API: ' + (e.message || 'unreachable')); }
     }
-    errors.push('ReliefWeb: ' + lastErr);
+    try {
+      const rows = parseFeed(await fetchVia('https://reliefweb.int/disasters/rss.xml', 'text'), 'reliefweb.int');
+      if (!rows.length) throw new Error('no items parsed');
+      /* titles arrive as "Thailand: Drought - 2026", which carries both fields */
+      pushReliefRows(rows.map(r => {
+        const m = /^([^:]{2,40}):\s*(.+?)(?:\s+-\s+\d{4})?$/.exec(r.title);
+        return { name: r.title, type: m ? m[2] : '', countries: m ? [m[1]] : [], when: r.when, url: r.url };
+      }));
+    } catch (e) { errors.push('ReliefWeb: ' + (e.message || 'unreachable')); }
   })();
+
+  function pushReliefRows(rows) {
+    for (const r of rows) {
+      const cat = rwCategory((r.type || '') + ' ' + r.name);
+      if (cat === 'other' && !r.type) continue;
+      const match = r.countries.some(c => TRACKED_COUNTRIES.some(t => c.toLowerCase().includes(t)));
+      items.push({ src: 'ReliefWeb', cat, title: r.name, place: r.countries.join(', '),
+        when: r.when, url: r.url, km: match ? 0 : null, kmSpot: match ? 0 : null,
+        nearName: match ? r.countries[0] : null });
+    }
+  }
 
   await Promise.all([eonet, relief]);
   items.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
@@ -3621,6 +3722,17 @@ document.addEventListener('click', async e => {
       ? 'On. I will raise a notification for high-severity items while this page is open in a tab. A page like this cannot wake your device when it is closed — that needs a server behind it.'
       : 'Notifications were not granted, so alerts will only appear here on the page.';
     return;
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'rwApp') {
+    state.rwAppname = e.target.value.trim();
+    store.set('rwAppname', state.rwAppname);
+    respond(state.rwAppname
+      ? `ReliefWeb app name saved. I will use their API instead of the public feed from the next refresh.`
+      : 'ReliefWeb app name cleared — falling back to their public RSS.');
+    refreshAll({ quiet: true });
   }
 });
 
@@ -4768,6 +4880,7 @@ function boot() {
 
   buildSimVars();
   renderRules();
+  if ($('#rwApp')) $('#rwApp').value = state.rwAppname;
   initVoice();
   setView(state.view);
   for (const loc of [...MAIN(), ...state.watch]) {
