@@ -36,12 +36,32 @@ search.
   1,200 km) and the wider ENSO-sensitive world. These are observed events,
   not attributions: ENSO shifts the seasonal odds of these event types, it
   does not cause any individual one, and neither feed claims otherwise.
-- **Synthesis** — live variables combined into 0–100 drought, flood, heat,
-  fire and disruption indices, plus a 7-day disruption trajectory. Every
-  contributing term is printed with its value, so the number can be argued
-  with. The ENSO term is scaled by each region's teleconnection strength
-  *and* its confidence, so weak-signal regions get a near-zero ENSO push by
-  construction rather than by disclaimer.
+- **Synthesis** — each city summed up in plain language first: what is
+  happening, what to watch, and whether it is getting better or worse. The
+  0–100 drought, flood, heat, fire and disruption indices and every
+  contributing term are still there under *Show the numbers*, so the
+  reasoning can be checked rather than taken on trust. The ENSO term is
+  scaled by each region's teleconnection strength *and* its confidence, so
+  weak-signal regions get a near-zero ENSO push by construction rather than
+  by disclaimer.
+
+**Momentum and measured accuracy**
+
+Momentum comes from the last three weeks of *observed* weather, refetched on
+every load — so a city added a minute ago has real momentum immediately,
+rather than waiting for this browser to accumulate a record.
+
+Accuracy is measured, not asserted. Every forecast is written down, and once
+the day passes it is scored against what actually happened: temperature error,
+whether the wet/dry call was right, and a running signed bias. A fresh browser
+honestly reports "no track record yet" instead of inventing a number. Once
+there are at least eight verified days, the learned warm/cool bias is
+subtracted from the model's temperature input and the correction is stated on
+screen.
+
+Any city can be searched and promoted to a main city — it is calibrated
+against its own 2010–2024 normals and observed history on the spot, so it is
+valid immediately rather than showing placeholders.
 - **Simulator** — set ONI, rainfall, temperature anomaly, humidity, wind,
   peak rain and horizon, and see the indices recompute for every region.
   Define criteria ("ONI at or above 1.0 AND rainfall at or below 70% of

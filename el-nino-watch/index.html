@@ -492,6 +492,29 @@
     100%{box-shadow:0 0 0 14px rgba(63,201,255,0),0 0 0 rgba(63,201,255,0);}}
   h2.flash,#detailTitle.flash{color:var(--accent);text-shadow:0 0 22px rgba(63,201,255,.8);}
 
+  /* ---------- plain english, momentum, accuracy ---------- */
+  .plain{border-left:2px solid var(--accent);padding-left:14px;}
+  .plain-head{font-size:19px;font-weight:650;letter-spacing:-.01em;color:var(--txt);line-height:1.35;
+    text-shadow:0 0 20px rgba(63,201,255,.25);}
+  .plain-list{list-style:none;margin-top:11px;display:flex;flex-direction:column;gap:8px;}
+  .plain-list li{font-size:14.5px;line-height:1.6;color:var(--txt-2);display:flex;gap:9px;}
+  .plain-list li::before{content:"—";color:var(--accent);opacity:.7;flex:none;}
+  details.tech{margin-top:14px;border-top:1px solid var(--line);padding-top:10px;}
+  details.tech summary{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--txt-3);cursor:pointer;list-style:none;}
+  details.tech summary::-webkit-details-marker{display:none;}
+  details.tech summary::before{content:"▸ ";color:var(--accent);}
+  details.tech[open] summary::before{content:"▾ ";}
+  details.tech summary:hover{color:var(--txt);}
+  .skill{margin-top:14px;padding-top:11px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--txt-3);}
+  .pin{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--txt-3);
+    border:1px solid var(--line);border-radius:2px;padding:3px 6px;flex:none;opacity:0;transition:.15s;}
+  .city:hover .pin{opacity:1;}
+  .pin:hover{color:var(--txt);border-color:var(--accent);}
+  .pin.on{opacity:1;color:var(--accent);border-color:var(--accent);
+    background:rgba(63,201,255,.10);}
+
   /* ---------- floating dock ---------- */
   .dock{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;
     align-items:flex-end;gap:10px;pointer-events:none;}
@@ -803,15 +826,18 @@
 <section class="view" id="v-synth" role="tabpanel">
   <div class="sec-title">
     <h2>Synthesis</h2>
-    <span class="note">Live variables combined into risk indices, with every factor shown</span>
+    <span class="note">What is actually happening in each city, in plain terms — plus momentum and measured accuracy</span>
   </div>
   <div class="card" style="margin-bottom:14px">
     <p class="xs dim" style="line-height:1.6">
-      This is a <b>transparent heuristic, not a validated forecast model</b>. It combines the live variables
-      below — temperature against normal, rainfall against normal, humidity, wind, and the ENSO phase weighted
-      by each region's real teleconnection strength — into 0–100 indices. Every contributing term is listed so
-      you can see exactly why a number moved, and disagree with it. Regions where ENSO is a weak predictor
-      (Lebanon, Türkiye, the UK) get a correspondingly small ENSO term by design.
+      Each city is summed up in plain language first — what is actually happening, what to watch, and whether
+      it is getting better or worse. The numbers behind it are still there under <b>Show the numbers</b>,
+      because you should be able to check the reasoning rather than take it on trust.
+      <br><br>
+      Momentum comes from the last three weeks of <i>observed</i> weather, so it is real from the moment a
+      city is added rather than something this browser has to accumulate. The accuracy line under each city is
+      measured, not asserted: every forecast is written down and scored against what actually happened, and it
+      says so honestly when there is not yet enough of a record to judge.
     </p>
   </div>
   <div id="synthList"></div>
@@ -966,6 +992,18 @@ const SPOTLIGHTS = [
            {name:'Edinburgh',lat:55.9533,lon:-3.1883},
            {name:'Cardiff',lat:51.4816,lon:-3.1791} ] },
 ];
+
+/* Cities the user promotes from the watch list become main cities too. They get
+   a unique pseudo-region so the lens and model weights fall back to 'generic'
+   rather than colliding with a built-in region. */
+function MAIN() {
+  const extra = state.watch
+    .filter(w => state.pinned.includes(w.id))
+    .map(w => ({ ...w, region: 'user:' + w.id, area: [] }));
+  return SPOTLIGHTS.concat(extra);
+}
+const lensOf = loc => LENS[loc.region] || LENS.generic;
+const fxOf = loc => ENSO_FX[loc.region] || ENSO_FX.generic;
 
 /* Global ENSO-sensitive reference points, seeded into the watch list. */
 const DEFAULT_WATCH = [
@@ -1240,6 +1278,11 @@ const state = {
   view: store.get('view') || 'overview',
   crisis: null,                           // { items, errors, at }
   crisisFilter: 'all',
+  pinned: store.get('pinned') || [],      // watch-list ids promoted to main cities
+  hist: {},                               // key -> recent observed daily series
+  skill: store.get('skill') || {},        // key -> measured forecast track record
+  fcLog: store.get('fcLog') || {},        // predictions awaiting verification
+  calibrating: null,                      // id of a city being calibrated right now
   sim: store.get('sim') || null,          // filled from SIM_VARS defaults on boot
   simRegion: store.get('simRegion') || 'all',
   rules: store.get('rules') || null,      // filled from DEFAULT_RULES on boot
@@ -1254,7 +1297,7 @@ const keyOf = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
 /* Every point we ask the forecast API about, in one flat list. */
 function allPoints() {
   const out = [];
-  for (const s of SPOTLIGHTS) {
+  for (const s of MAIN()) {
     out.push({ key: keyOf(s), lat: s.lat, lon: s.lon });
     for (const a of s.area) out.push({ key: keyOf(a), lat: a.lat, lon: a.lon });
   }
@@ -1264,10 +1307,10 @@ function allPoints() {
 }
 
 function locById(id) {
-  const s = SPOTLIGHTS.find(x => x.id === id);
+  const s = MAIN().find(x => x.id === id);
   if (s) return s;
   const w = state.watch.find(x => x.id === id);
-  return w ? { ...w, region: 'generic', area: [] } : SPOTLIGHTS[0];
+  return w ? { ...w, region: 'user:' + w.id, area: [] } : SPOTLIGHTS[0];
 }
 const fcOf = loc => state.fc[keyOf(loc)] || null;
 
@@ -1299,6 +1342,22 @@ async function loadForecasts() {
   pts.forEach((p, i) => { if (arr[i]) map[p.key] = arr[i]; });
   state.fc = map;
   store.set('fc', map);
+}
+
+/* Recent observed weather for every tracked point, used for three things:
+   momentum (is this getting worse?), forecast verification, and calibration of
+   a newly added city. Daily-only so the payload stays small. */
+const HIST_DAILY = ['temperature_2m_max','temperature_2m_min','apparent_temperature_max',
+  'precipitation_sum','wind_speed_10m_max'].join(',');
+
+async function loadHistory() {
+  const pts = allPoints();
+  const raw = await fetchJSON('https://api.open-meteo.com/v1/forecast'
+    + '?latitude='  + pts.map(p => p.lat).join(',')
+    + '&longitude=' + pts.map(p => p.lon).join(',')
+    + '&daily=' + HIST_DAILY + '&past_days=21&forecast_days=1&timezone=auto&wind_speed_unit=kmh');
+  const arr = Array.isArray(raw) ? raw : [raw];
+  pts.forEach((p, i) => { if (arr[i] && arr[i].daily) state.hist[p.key] = arr[i].daily; });
 }
 
 /* Niño 3.4 SST. Marine model first; the forecast model's 2 m temperature over open
@@ -1485,7 +1544,8 @@ function hourIndex(f) {
 function buildAlerts() {
   const out = [];
   const push = (sev, title, body) => out.push({ sev, title, body });
-  const locs = [...SPOTLIGHTS, ...state.watch.map(w => ({ ...w, region: 'generic' }))];
+  const seen = new Set(MAIN().map(m => m.id));
+  const locs = [...MAIN(), ...state.watch.filter(w => !seen.has(w.id)).map(w => ({ ...w, region: 'user:' + w.id }))];
 
   for (const loc of locs) {
     const s = summarize(loc);
@@ -1723,8 +1783,8 @@ function renderEnso() {
   const dir = { elnino:{5:'much drier',3:'wetter winters',2:'weak signal'},
                 lanina:{5:'much wetter',3:'drier winters',2:'weak signal'},
                 neutral:{5:'near normal',3:'no ENSO steer',2:'no ENSO steer'} }[ph.key];
-  $('#sensList').innerHTML = SPOTLIGHTS.map(s => {
-    const L = LENS[s.region], lv = L.sensitivity;
+  $('#sensList').innerHTML = MAIN().map(s => {
+    const L = lensOf(s), lv = L.sensitivity;
     const conf = L[ph.key].conf;
     const col = lv >= 5 ? 'var(--hot)' : lv >= 3 ? 'var(--warn)' : 'var(--txt-3)';
     return `<div class="sens">
@@ -1763,8 +1823,16 @@ function rainChip(pPct) {
   return `<span class="chip ${cls}">${Math.round(pPct)}% of normal rain</span>`;
 }
 
+function momChip(loc) {
+  if (state.calibrating === loc.id) return '<span class="chip warm">calibrating…</span>';
+  const m = momentumOf(loc);
+  if (!m || !num(m.delta)) return '';
+  const cls = m.delta >= 5 ? 'hot' : m.delta <= -5 ? 'cool' : '';
+  return `<span class="chip ${cls}">${momentumArrow(m.delta)} ${esc(momentumWord(m.delta))}</span>`;
+}
+
 function renderSpots() {
-  $('#spots').innerHTML = SPOTLIGHTS.map(s => {
+  $('#spots').innerHTML = MAIN().map(s => {
     const sum = summarize(s);
     const on = state.selected === s.id ? ' on' : '';
     if (!sum) return `<button class="spot${on}" data-loc="${s.id}">
@@ -1782,31 +1850,36 @@ function renderSpots() {
       </div>
       <div class="spot-temp" style="margin-top:8px">${fx(T(sum.cur.temperature_2m), 0)}°</div>
       <div class="spot-sub" style="margin-bottom:9px">${esc(sum.label)} · feels ${fx(T(sum.cur.apparent_temperature), 0)}°</div>
-      <div class="row wrap-w" style="gap:5px">${anomChip(sum.tAnom)}${rainChip(sum.pPct)}</div>
+      <div class="row wrap-w" style="gap:5px">${anomChip(sum.tAnom)}${rainChip(sum.pPct)}${momChip(s)}</div>
       <div class="spark" title="7-day rainfall">${d.precipitation_sum
         .map(v => `<i style="height:${Math.max(6, (v / maxP) * 100)}%;opacity:${v > 0 ? .9 : .25}"></i>`).join('')}</div>
     </button>`;
   }).join('');
 }
 
-function cityRow(loc, removable) {
+function cityRow(loc, removable, isPinned) {
   const sum = summarize(loc);
   const on = state.selected === loc.id ? ' on' : '';
+  const cal = state.calibrating === loc.id;
   return `<div class="city${on}" data-loc="${loc.id}" role="button" tabindex="0">
     ${sum ? icon(sum.code, sum.isDay, 'ci') : '<div class="ci"></div>'}
     <div class="grow" style="min-width:0">
       <div class="cn">${esc(loc.name)}</div>
       <div class="cc">${esc(sum ? sum.label : loc.country || '')}</div>
     </div>
-    <div class="ct">${sum ? fx(T(sum.cur.temperature_2m), 0) + '°' : '–'}</div>
-    ${removable ? `<button class="city-x" data-rm="${loc.id}" title="Remove" aria-label="Remove ${esc(loc.name)}">×</button>` : ''}
+    <div class="ct">${cal ? '<span class="xs" style="color:var(--warm)">calibrating</span>'
+      : (sum ? fx(T(sum.cur.temperature_2m), 0) + '°' : '–')}</div>
+    ${isPinned ? `<button class="pin on" data-unpin="${loc.id}" title="Remove from main cities">MAIN</button>` : ''}
+    ${removable ? `<button class="pin" data-pin="${loc.id}" title="Promote to a main city">+ MAIN</button>
+      <button class="city-x" data-rm="${loc.id}" title="Remove" aria-label="Remove ${esc(loc.name)}">×</button>` : ''}
   </div>`;
 }
 
 function renderRail() {
-  $('#railSpots').innerHTML = SPOTLIGHTS.map(s => cityRow(s, false)).join('');
+  $('#railSpots').innerHTML = MAIN().map(s => cityRow(s, false, state.pinned.includes(s.id))).join('');
   $('#railWatch').innerHTML = state.watch.length
-    ? state.watch.map(w => cityRow(w, true)).join('')
+    ? state.watch.filter(w => !state.pinned.includes(w.id)).map(w => cityRow(w, true, false)).join('')
+      || '<div class="empty">All watched cities are promoted to main.</div>'
     : '<div class="empty">Watch list is empty.</div>';
 
   const loc = locById(state.selected), f = fcOf(loc);
@@ -1947,7 +2020,7 @@ function renderDetail() {
 
   /* El Niño lens */
   const ph = phaseOf(headlineAnom());
-  const L = LENS[loc.region] || LENS.generic;
+  const L = lensOf(loc);
   const lens = L[ph.key];
   $('#lensCard').innerHTML = `
     <div class="row wrap-w" style="margin-bottom:12px">
@@ -2092,7 +2165,7 @@ function liveVars(loc) {
   }
   return {
     oni: headlineAnom() ?? 0,
-    tAnom: s.tAnom ?? 0,
+    tAnom: num(s.tAnom) ? s.tAnom - biasOf(loc) : 0,
     rainPct: num(s.pPct) && s.pPct < 999 ? s.pPct : 100,
     peakRain: Math.max(0, ...d.precipitation_sum),
     humidity: hum,
@@ -2132,8 +2205,84 @@ function trajectory(loc) {
   });
 }
 
+/* ═══════════════ plain English ════════════════════════════════════════════
+   The same numbers, said the way a person would say them. No indices, no
+   points, no jargon — those stay available under "show the numbers".
+   ═════════════════════════════════════════════════════════════════════════ */
+
+function tempWord(a) {
+  if (!num(a)) return null;
+  return a >= 4 ? 'much hotter than usual' : a >= 1.5 ? 'warmer than usual'
+    : a <= -4 ? 'much colder than usual' : a <= -1.5 ? 'cooler than usual'
+    : 'about the usual temperature';
+}
+function rainWord(p) {
+  if (!num(p)) return null;
+  return p >= 220 ? 'far wetter than usual' : p >= 140 ? 'wetter than usual'
+    : p <= 40 ? 'far drier than usual' : p <= 75 ? 'drier than usual'
+    : 'about the usual amount of rain';
+}
+
+function plainSummary(loc) {
+  const v = liveVars(loc);
+  const s2 = summarize(loc);
+  if (!v || !s2) return null;
+  const ix = computeIndices(loc.region, v);
+  const d = s2.daily;
+  const mom = momentumOf(loc);
+  const calibrated = num(s2.tAnom);
+
+  const tw = tempWord(s2.tAnom), rw = rainWord(s2.pPct);
+  let headline;
+  if (!calibrated) headline = `Still working out what is normal for ${loc.name}.`;
+  else if (tw && rw && tw.includes('usual temperature') && rw.includes('usual amount'))
+    headline = `A fairly ordinary week for ${loc.name}.`;
+  else headline = `${loc.name} is ${[tw, rw].filter(Boolean).filter(x =>
+    !x.startsWith('about the')).join(' and ') || 'close to normal'} this week.`;
+  if (mom && num(mom.delta) && Math.abs(mom.delta) >= 5)
+    headline += mom.delta > 0 ? ' And it has been getting worse.' : ' It has been easing off.';
+
+  const bullets = [];
+
+  const peakA = Math.max(...d.time.map((_, i) => appMax(d, i)));
+  bullets.push(`Warmest it will feel: ${fx(T(peakA), 0)}${U()}`
+    + (calibrated ? `, which is ${Math.abs(dT(s2.tAnom)).toFixed(1)}${U()} `
+       + `${s2.tAnom > 0 ? 'above' : 'below'} what ${loc.name} normally gets at this time of year.` : '.'));
+
+  const peakR = Math.max(...d.precipitation_sum);
+  const wettest = dayName(d.time[d.precipitation_sum.indexOf(peakR)], s2.f.timezone);
+  if (s2.p7 < 1) bullets.push('Essentially no rain expected in the next seven days.');
+  else bullets.push(`About ${fx(s2.p7, 0)} mm of rain over the week`
+    + (num(s2.pNorm) && s2.pNorm > 0.5 ? `, against the ${fx(s2.pNorm, 0)} mm this week usually brings` : '')
+    + `. The wettest day looks like ${wettest} at ${fx(peakR, 0)} mm.`);
+
+  const ranked = IX_META.filter(m => m.k !== 'disruption')
+    .map(m => ({ ...m, val: ix[m.k] })).sort((a, b) => b.val - a.val);
+  const top = ranked[0];
+  const PLAIN_RISK = {
+    flood: peakR >= 25
+      ? `The main thing to watch is heavy rain. ${wettest} is forecast at ${fx(peakR, 0)} mm — enough to overwhelm drains and slow traffic.`
+      : 'The main thing to watch is rain, though nothing extreme is showing yet.',
+    drought: 'The main thing to watch is dryness — the ground is getting well under the rain it normally would, which builds into water stress if it holds.',
+    heat: `The main thing to watch is heat. It will feel like ${fx(T(peakA), 0)}${U()} at its worst, which is hard going for anyone working or travelling outdoors.`,
+    fire: 'The main thing to watch is fire and haze risk — the mix of dry, warm and breezy conditions that lets fires start and spread.',
+  };
+  if (top.val >= 30) bullets.push(PLAIN_RISK[top.k]);
+  else bullets.push('Nothing is standing out as a risk this week.');
+
+  const fx2 = fxOf(loc), ph = phaseOf(headlineAnom());
+  if (ph.key === 'neutral' || fx2.conf <= 0.3)
+    bullets.push(`El Niño is not really the story here — ${loc.country || loc.name}'s weather is driven by other things, so treat the Pacific as background.`);
+  else
+    bullets.push(`El Niño ${ix.dryPush > 0 ? 'pushes' : 'nudges'} ${loc.country || loc.name} toward `
+      + `${ix.dryPush > 0 ? 'drier' : 'wetter'} conditions in this phase, and that is a `
+      + `${fx2.conf >= 0.9 ? 'well-established, reliable' : 'moderate'} pattern.`);
+
+  return { headline, bullets, ix, mom, calibrated };
+}
+
 function synthText(loc, ix, v) {
-  const L = LENS[loc.region] || LENS.generic;
+  const L = lensOf(loc);
   const ranked = IX_META.filter(m => m.k !== 'disruption')
     .map(m => ({ ...m, val: ix[m.k] })).sort((a, b) => b.val - a.val);
   const top = ranked[0], second = ranked[1];
@@ -2157,6 +2306,138 @@ function synthText(loc, ix, v) {
     out.push(`The current ENSO phase adds ${signed(push, 1)} points to the drought side of the model, reflecting ${L.title}'s ${push > 0 ? 'drying' : 'wetting'} tendency in this phase.`);
 
   return out.join(' ');
+}
+
+/* ═══════════════ momentum ═════════════════════════════════════════════════
+   Momentum answers "is this getting worse?" from observed weather, not from a
+   record this browser had to accumulate — the past 21 days come back with every
+   refresh, so a city added a minute ago has real momentum immediately.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+function dayVars(loc, d, i, norm, humidity) {
+  const doy = doyOf(d.time[i]);
+  const mean = (d.temperature_2m_max[i] + d.temperature_2m_min[i]) / 2;
+  const pNorm = norm && num(norm.p[doy]) ? norm.p[doy] : null;
+  return {
+    oni: headlineAnom() ?? 0,
+    tAnom: norm && num(norm.t[doy]) ? mean - norm.t[doy] - biasOf(loc) : 0,
+    rainPct: pNorm && pNorm > 0.3 ? (d.precipitation_sum[i] / pNorm) * 100 : 100,
+    peakRain: d.precipitation_sum[i] || 0,
+    humidity,
+    wind: (d.wind_speed_10m_max || [])[i] || 0,
+    maxApp: (d.apparent_temperature_max && num(d.apparent_temperature_max[i]))
+      ? d.apparent_temperature_max[i] : d.temperature_2m_max[i],
+    horizon: 0,
+  };
+}
+
+function momentumOf(loc) {
+  const k = keyOf(loc), h = state.hist[k], n = state.norm[k];
+  if (!h || !h.time || !n) return null;
+  const s2 = summarize(loc);
+  const hum = s2 ? s2.cur.relative_humidity_2m : 55;   // held constant so it cannot skew the trend
+  const series = h.time.map((t, i) => ({ t, y: computeIndices(loc.region, dayVars(loc, h, i, n, hum)).disruption }));
+  if (series.length < 10) return { series, delta: null };
+  const tail = series.slice(-7).map(x => x.y);
+  const prev = series.slice(-14, -7).map(x => x.y);
+  const avg = a => a.reduce((p, c) => p + c, 0) / a.length;
+  return { series, delta: avg(tail) - avg(prev), now: avg(tail) };
+}
+
+const momentumWord = d => !num(d) ? 'building history'
+  : d >= 12 ? 'worsening fast' : d >= 5 ? 'worsening'
+  : d <= -12 ? 'easing fast' : d <= -5 ? 'easing' : 'steady';
+const momentumArrow = d => !num(d) ? '·' : d >= 5 ? '▲' : d <= -5 ? '▼' : '▬';
+
+/* ═══════════════ forecast verification ════════════════════════════════════
+   Every forecast is written down, then scored against what actually happened.
+   Nothing is claimed about accuracy until real checks exist — a fresh browser
+   honestly reports "no track record yet".
+   ═════════════════════════════════════════════════════════════════════════ */
+
+function logForecasts() {
+  const today = iso(new Date());
+  for (const loc of [...MAIN(), ...state.watch]) {
+    const f = fcOf(loc); if (!f || !f.daily) continue;
+    const d = f.daily, k = keyOf(loc);
+    for (let i = 1; i < d.time.length; i++) {          // lead 1..6; today is not a forecast
+      const id = k + '|' + d.time[i];
+      if (state.fcLog[id]) continue;                   // keep the earliest prediction made
+      state.fcLog[id] = { issued: today, lead: i,
+        tmax: d.temperature_2m_max[i], prcp: d.precipitation_sum[i] };
+    }
+  }
+  const cutoff = iso(addDays(new Date(), -30));
+  for (const id of Object.keys(state.fcLog))
+    if (id.split('|')[1] < cutoff) delete state.fcLog[id];
+  store.set('fcLog', state.fcLog);
+}
+
+function verifyForecasts() {
+  const today = iso(new Date());
+  let scored = 0;
+  for (const id of Object.keys(state.fcLog)) {
+    const [k, target] = id.split('|');
+    if (target >= today) continue;                     // not yet observable
+    const h = state.hist[k];
+    if (!h || !h.time) continue;
+    const i = h.time.indexOf(target);
+    if (i < 0) continue;
+    const actualT = h.temperature_2m_max[i], actualP = h.precipitation_sum[i];
+    if (!num(actualT)) continue;
+
+    const p = state.fcLog[id];
+    const sk = state.skill[k] || { n: 0, tempOk: 0, rainOk: 0, sumAbs: 0, sumSigned: 0, byLead: {} };
+    const err = p.tmax - actualT;                      // + means the forecast ran warm
+    sk.n++;
+    sk.sumAbs += Math.abs(err);
+    sk.sumSigned += err;
+    if (Math.abs(err) <= 2) sk.tempOk++;
+    if (num(p.prcp) && num(actualP)) {
+      const predWet = p.prcp >= 1, gotWet = actualP >= 1;
+      if (predWet === gotWet) sk.rainOk++;
+    }
+    const L = sk.byLead[p.lead] || { n: 0, sumAbs: 0 };
+    L.n++; L.sumAbs += Math.abs(err);
+    sk.byLead[p.lead] = L;
+    state.skill[k] = sk;
+    delete state.fcLog[id];
+    scored++;
+  }
+  if (scored) { store.set('skill', state.skill); store.set('fcLog', state.fcLog); }
+  return scored;
+}
+
+/* Learned warm/cool bias, applied to the model's temperature input once there
+   is enough evidence to be worth trusting. */
+function biasOf(loc) {
+  const sk = state.skill[keyOf(loc)];
+  if (!sk || sk.n < 8) return 0;
+  return clamp(sk.sumSigned / sk.n, -3, 3);
+}
+
+function skillOf(loc) {
+  const sk = state.skill[keyOf(loc)];
+  if (!sk || !sk.n) return null;
+  return {
+    n: sk.n,
+    mae: sk.sumAbs / sk.n,
+    tempPct: (sk.tempOk / sk.n) * 100,
+    rainPct: (sk.rainOk / sk.n) * 100,
+    bias: sk.sumSigned / sk.n,
+    overall: ((sk.tempOk / sk.n) * 0.5 + (sk.rainOk / sk.n) * 0.5) * 100,
+    applied: sk.n >= 8,
+  };
+}
+
+function skillLine(loc) {
+  const s2 = skillOf(loc);
+  if (!s2) return 'No track record yet — accuracy appears once forecasts have been checked against what actually happened.';
+  const conf = s2.n < 10 ? 'still thin' : s2.n < 40 ? 'early' : 'reasonable';
+  return `${Math.round(s2.overall)}% accurate over ${s2.n} checks (${conf} sample). `
+    + `Temperature within 2° on ${Math.round(s2.tempPct)}% of days, average miss ${s2.mae.toFixed(1)}°. `
+    + `Rain call right ${Math.round(s2.rainPct)}% of the time.`
+    + (s2.applied ? ` Running ${signed(s2.bias)}° ${s2.bias > 0 ? 'warm' : 'cool'}, now corrected for.` : '');
 }
 
 /* ═══════════════ crisis feeds ═══════════════ */
@@ -2185,11 +2466,11 @@ function haversine(a, b, c, d) {
    dashboard actually exists to watch. */
 function nearestTracked(lat, lon) {
   let best = null, bestSpot = null;
-  for (const l of SPOTLIGHTS) {
+  for (const l of MAIN()) {
     const km = haversine(lat, lon, l.lat, l.lon);
     if (!bestSpot || km < bestSpot.km) bestSpot = { km, name: l.name };
   }
-  for (const l of [...SPOTLIGHTS, ...state.watch]) {
+  for (const l of [...MAIN(), ...state.watch]) {
     const km = haversine(lat, lon, l.lat, l.lon);
     if (!best || km < best.km) best = { km, name: l.name };
   }
@@ -2364,49 +2645,65 @@ function ixBars(ix) {
 }
 
 function renderSynth() {
-  const locs = [...SPOTLIGHTS];
+  const locs = [...MAIN()];
   const sel = locById(state.selected);
-  if (!SPOTLIGHTS.some(s => s.id === sel.id)) locs.unshift(sel);
+  if (!locs.some(s => s.id === sel.id)) locs.unshift(sel);
 
   $('#synthList').innerHTML = locs.map(loc => {
-    const v = liveVars(loc);
-    if (!v) return `<section class="card synth"><div class="h">${esc(loc.name)}</div>
-      <div class="empty">Waiting for live data…</div></section>`;
-    const ix = computeIndices(loc.region, v);
-    /* Terms are shown before clamping, with the clamped result after the arrow —
-       so a wildly negative term and a floor of 0 both stay visible. */
+    const pl = plainSummary(loc);
+    if (!pl) return `<section class="card synth" id="synth-${esc(loc.id)}"><div class="h">${esc(loc.name)}</div>
+      <div class="empty">${state.calibrating === loc.id ? 'Calibrating…' : 'Waiting for live data…'}</div></section>`;
+    const ix = pl.ix, v = liveVars(loc);
     const termRows = Object.entries(ix.terms).map(([kk, arr]) =>
       `<div class="t"><span>${esc(kk)}</span><b>${arr.map(([n2, x]) =>
         `${esc(n2)} ${signed(x, 1)}`).join(' · ')} → ${Math.round(ix[kk])}</b></div>`).join('');
+    const m = pl.mom;
     return `<section class="card synth" id="synth-${esc(loc.id)}">
-      <div class="row wrap-w" style="margin-bottom:10px">
-        <div class="grow"><div class="h">${esc(loc.name)}${loc.country ? ' · ' + esc(loc.country) : ''}</div>
-          <div class="xs dim">live variables, this week</div></div>
+      <div class="row wrap-w" style="margin-bottom:12px">
+        <div class="grow"><div class="h">${esc(loc.name)}${loc.country ? ' · ' + esc(loc.country) : ''}</div></div>
+        ${momChip(loc)}
         <span class="chip ${ix.disruption >= 70 ? 'hot' : ix.disruption >= 45 ? 'warm' : ''}">
           disruption ${Math.round(ix.disruption)}</span>
       </div>
-      <div class="ix-cols">
-        <div>${ixBars(ix)}
-          <div class="chart-wrap" style="height:150px;min-height:150px;margin-top:12px"
-               id="traj-${esc(loc.id)}"></div></div>
+
+      <div class="plain">
+        <div class="plain-head">${esc(pl.headline)}</div>
+        <ul class="plain-list">${pl.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+      </div>
+
+      <div class="ix-cols" style="margin-top:16px">
         <div>
-          <p class="sm muted" style="line-height:1.6">${esc(synthText(loc, ix, v))}</p>
-          <div class="h" style="margin:14px 0 4px">How it was built</div>
-          <div class="terms">${termRows}</div>
+          <div class="h" style="margin-bottom:6px">Momentum, past 3 weeks and the week ahead</div>
+          <div class="chart-wrap" style="height:160px;min-height:160px" id="traj-${esc(loc.id)}"></div>
+        </div>
+        <div>
+          ${ixBars(ix)}
+          <details class="tech">
+            <summary>Show the numbers</summary>
+            <p class="sm muted" style="line-height:1.6;margin-bottom:10px">${esc(synthText(loc, ix, v))}</p>
+            <div class="terms">${termRows}</div>
+          </details>
         </div>
       </div>
+      <div class="skill">${esc(skillLine(loc))}</div>
     </section>`;
   }).join('');
 
   for (const loc of locs) {
     const el = $('#traj-' + loc.id);
     if (!el) continue;
-    const tr = trajectory(loc);
-    if (!tr.length) { el.innerHTML = '<div class="empty">No trajectory</div>'; continue; }
-    lineChart(el, tr.map(x => ({ y: x.y })), {
-      color: '#c9d2df', gid: 'tj' + loc.id, min: 0, max: 100,
-      fmt: v2 => String(Math.round(v2)),
-      labels: tr.map((x, i) => ({ i, text: i === 0 ? 'Today' : dayName(x.t, null) })),
+    const past = (momentumOf(loc) || {}).series || [];
+    const fwd = trajectory(loc);
+    const all = past.concat(fwd.slice(1));            // fwd[0] is today, already in past
+    if (!all.length) { el.innerHTML = '<div class="empty">Building history…</div>'; continue; }
+    const step = Math.max(1, Math.floor(all.length / 4));
+    const labels = [];
+    for (let i = 0; i < all.length; i += step)
+      labels.push({ i, text: new Date(all[i].t + 'T12:00:00').toLocaleDateString(undefined,
+        { month: 'short', day: 'numeric' }) });
+    lineChart(el, all.map(x => ({ y: x.y })), {
+      color: '#3fc9ff', gid: 'tj' + loc.id, min: 0, max: 100,
+      fmt: v2 => String(Math.round(v2)), labels,
     });
   }
 }
@@ -2430,7 +2727,7 @@ const RULE_VARS = [
 ];
 
 function simRegions() {
-  return state.simRegion === 'all' ? SPOTLIGHTS : SPOTLIGHTS.filter(s => s.region === state.simRegion);
+  return state.simRegion === 'all' ? MAIN() : MAIN().filter(s => s.region === state.simRegion);
 }
 
 function buildSimVars() {
@@ -2450,7 +2747,7 @@ function buildSimVars() {
   });
 
   $('#simRegion').innerHTML = '<option value="all">All spotlight regions</option>'
-    + SPOTLIGHTS.map(s => `<option value="${esc(s.region)}">${esc(s.name)} · ${esc(s.country)}</option>`).join('');
+    + MAIN().map(s => `<option value="${esc(s.region)}">${esc(s.name)} · ${esc(s.country)}</option>`).join('');
   $('#simRegion').value = state.simRegion;
   $('#simRegion').addEventListener('change', e => {
     state.simRegion = e.target.value; store.set('simRegion', state.simRegion);
@@ -2475,7 +2772,7 @@ function renderSimOut() {
 
   $('#simOut').innerHTML = simRegions().map(s => {
     const ix = computeIndices(s.region, state.sim);
-    const L = LENS[s.region];
+    const L = lensOf(s);
     return `<div style="margin-bottom:16px">
       <div class="row" style="margin-bottom:4px">
         <div class="grow" style="font-size:13.5px;font-weight:650">${esc(s.name)}</div>
@@ -2498,7 +2795,7 @@ function evalRule(rule, vars, region) {
 }
 
 function ruleStatus(rule) {
-  const regions = rule.region === 'any' ? SPOTLIGHTS : SPOTLIGHTS.filter(s => s.region === rule.region);
+  const regions = rule.region === 'any' ? MAIN() : MAIN().filter(s => s.region === rule.region);
   const simHits = regions.filter(s => evalRule(rule, state.sim, s.region)).map(s => s.name);
   const liveHits = regions.filter(s => {
     const v = liveVars(s);
@@ -2517,7 +2814,7 @@ function renderRules() {
         <select data-rreg="${esc(r.id)}" style="background:var(--panel-3);border:1px solid var(--line);
           border-radius:9px;color:var(--txt);padding:6px 9px;font-size:12px">
           <option value="any"${r.region === 'any' ? ' selected' : ''}>Any region</option>
-          ${SPOTLIGHTS.map(s => `<option value="${esc(s.region)}"${r.region === s.region ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}
+          ${MAIN().map(s => `<option value="${esc(s.region)}"${r.region === s.region ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}
         </select>
         <span class="tag ${st.simHits.length ? 'tag-fired' : 'tag-clear'}" data-tag-sim>
           ${st.simHits.length ? 'SIM: ' + esc(st.simHits.join(', ')) : 'SIM: clear'}</span>
@@ -2568,7 +2865,10 @@ async function refreshAll({ quiet = false } = {}) {
       loadForecasts(),
       loadEnso().catch(e => { console.warn('ENSO fetch failed:', e); }),
       loadCrisis().catch(e => { console.warn('crisis feeds failed:', e); }),
+      loadHistory().catch(e => { console.warn('history fetch failed:', e); }),
     ]);
+    verifyForecasts();
+    logForecasts();
     state.fetchedAt = Date.now();
     store.set('fetchedAt', state.fetchedAt);
   } catch (e) {
@@ -2586,7 +2886,7 @@ let normalsRunning = false;
 async function backfillNormals() {
   if (normalsRunning) return;
   normalsRunning = true;
-  const queue = [...SPOTLIGHTS, locById(state.selected), ...state.watch]
+  const queue = [...MAIN(), locById(state.selected), ...state.watch]
     .filter((l, i, a) => a.findIndex(x => keyOf(x) === keyOf(l)) === i);
   for (const loc of queue) {
     if (state.norm[keyOf(loc)]) continue;
@@ -2597,12 +2897,53 @@ async function backfillNormals() {
   normalsRunning = false;
 }
 
+/* A city added or promoted has to be usable straight away, so pull its forecast,
+   its 2010-2024 normals and its recent observed history before handing it back. */
+async function calibrateCity(loc) {
+  state.calibrating = loc.id;
+  render();
+  try {
+    await loadForecasts();
+    await Promise.all([
+      loadNormals(loc).catch(e => console.warn('normals', e)),
+      loadHistory().catch(e => console.warn('history', e)),
+    ]);
+    verifyForecasts();
+    logForecasts();
+  } finally {
+    state.calibrating = null;
+    render();
+  }
+}
+
 /* ─────────── events ─────────── */
 
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
   const spot = e.target.closest('[data-loc]');
   const rm = e.target.closest('[data-rm]');
+  const pin = e.target.closest('[data-pin]');
+  const unpin = e.target.closest('[data-unpin]');
 
+  if (pin) {
+    e.stopPropagation();
+    const id = pin.dataset.pin;
+    if (!state.pinned.includes(id)) state.pinned.push(id);
+    store.set('pinned', state.pinned);
+    state.selected = id; store.set('selected', id);
+    const loc = locById(id);
+    render();
+    await calibrateCity(loc);
+    respond(`${loc.name} is now a main city, calibrated against its own 2010 to 2024 normals. ${skillLine(loc)}`);
+    return;
+  }
+  if (unpin) {
+    e.stopPropagation();
+    state.pinned = state.pinned.filter(x => x !== unpin.dataset.unpin);
+    store.set('pinned', state.pinned);
+    if (state.selected === unpin.dataset.unpin) state.selected = 'dubai';
+    render();
+    return;
+  }
   if (rm) {
     e.stopPropagation();
     state.watch = state.watch.filter(w => w.id !== rm.dataset.rm);
@@ -2678,13 +3019,19 @@ $('#results').addEventListener('click', e => {
   const loc = JSON.parse(b.dataset.add);
   if (!state.watch.some(w => w.id === loc.id)) {
     state.watch.unshift(loc);
-    state.watch = state.watch.slice(0, 14);
+    state.watch = state.watch.slice(0, 18);
     store.set('watch', state.watch);
   }
+  if (!state.pinned.includes(loc.id)) state.pinned.push(loc.id);   // added = main, immediately
+  store.set('pinned', state.pinned);
   state.selected = loc.id;
   store.set('selected', state.selected);
   $('#q').value = ''; $('#results').hidden = true;
-  refreshAll({ quiet: true });
+  setView('overview');
+  calibrateCity(locById(loc.id)).then(() => {
+    const l = locById(loc.id);
+    respond(`${l.name} added and calibrated. ${(plainSummary(l) || {}).headline || ''}`);
+  });
 });
 
 /* tabs */
@@ -2718,7 +3065,7 @@ document.addEventListener('click', e => {
   if (mode === 'elnino') Object.assign(state.sim, { oni: 1.8, tAnom: 1.6, rainPct: 55, peakRain: 8, humidity: 42, wind: 25, maxApp: 38, horizon: 6 });
   if (mode === 'lanina') Object.assign(state.sim, { oni: -1.6, tAnom: -0.6, rainPct: 165, peakRain: 55, humidity: 82, wind: 45, maxApp: 32, horizon: 6 });
   if (mode === 'live') {
-    const target = state.simRegion === 'all' ? SPOTLIGHTS[0] : SPOTLIGHTS.find(s => s.region === state.simRegion);
+    const target = state.simRegion === 'all' ? MAIN()[0] : MAIN().find(s => s.region === state.simRegion);
     const v = target && liveVars(target);
     if (v) {
       SIM_VARS.forEach(k => { if (num(v[k.k])) state.sim[k.k] = Math.round(v[k.k] * 10) / 10; });
@@ -3162,7 +3509,7 @@ function termNarrative(name, val, v, loc) {
     case 'temperature anomaly':
       return `the temperature anomaly ${amt}, with the week running ${signed(v.tAnom)} °C against the local normal`;
     case 'ENSO phase': {
-      const fx = ENSO_FX[loc.region] || ENSO_FX.generic;
+      const fx = fxOf(loc);
       const strength = fx.conf >= 0.9 ? 'a strong, high-confidence teleconnection'
         : fx.conf >= 0.5 ? 'a moderate teleconnection' : 'a weak, low-confidence teleconnection';
       return `the ENSO phase ${amt} — ${loc.country || loc.name} has ${strength}, so the model weights the Pacific accordingly`;
@@ -3193,7 +3540,7 @@ function explainMetric(loc, k) {
     const h = headlineAnom();
     if (!num(h)) return 'The ENSO phase is not calibrated right now, so I will not put a number on it. ' + GLOSSARY.oni.text;
     const ph = phaseOf(h);
-    const fx = ENSO_FX[loc.region] || ENSO_FX.generic;
+    const fx = fxOf(loc);
     const push = ix.dryPush;
     return `Niño 3.4 is running ${signed(h)} °C, which is ${ph.name}${ph.strength ? ', ' + ph.strength.toLowerCase() : ''}. `
       + `For ${loc.name} that translates into ${signed(push, 1)} points on the drought side of the model, because `
@@ -3281,7 +3628,7 @@ function adviseFor(loc) {
     .map(m => ({ ...m, val: ix[m.k] })).sort((a, b) => b.val - a.val);
   const top = ranked[0];
   const ph = phaseOf(headlineAnom());
-  const L = LENS[loc.region] || LENS.generic;
+  const L = lensOf(loc);
   const lens = L[ph.key];
   const pts = lens.pts.slice(0, 3).join(' ');
   const lead = top.val < 25
@@ -3343,7 +3690,7 @@ const LOC_ALIASES = {
 
 function findLocation(t) {
   for (const [id, words] of Object.entries(LOC_ALIASES))
-    if (words.some(w => t.includes(w))) return SPOTLIGHTS.find(s => s.id === id);
+    if (words.some(w => t.includes(w))) return MAIN().find(s => s.id === id) || SPOTLIGHTS.find(s => s.id === id);
   for (const w of state.watch)
     if (t.includes(w.name.toLowerCase())) return { ...w, region: 'generic', area: [] };
   return null;
@@ -3358,23 +3705,32 @@ function briefEnso() {
 function briefLoc(loc) {
   const s = summarize(loc);
   if (!s) return `No live data for ${loc.name} yet.`;
-  const v = liveVars(loc), ix = v ? computeIndices(loc.region, v) : null;
-  let out = `${loc.name}: ${fx(T(s.cur.temperature_2m), 0)} degrees, ${s.label.toLowerCase()}.`;
-  if (num(s.tAnom)) out += ` ${signed(dT(s.tAnom))} against the local normal.`;
-  if (num(s.pPct) && s.pPct < 999) out += ` Rain at ${Math.round(s.pPct)} percent of normal this week.`;
-  if (ix) out += ` Disruption index ${Math.round(ix.disruption)} out of 100.`;
-  return out;
+  const pl = plainSummary(loc);
+  if (!pl) return `${loc.name} is ${fx(T(s.cur.temperature_2m), 0)} degrees and ${s.label.toLowerCase()}.`;
+  return `${pl.headline} Right now it is ${fx(T(s.cur.temperature_2m), 0)} degrees and ${s.label.toLowerCase()}. `
+    + pl.bullets.slice(0, 3).join(' ');
 }
 
+function briefMomentum(loc) {
+  const m = momentumOf(loc);
+  if (!m || !num(m.delta))
+    return `I do not have enough observed history for ${loc.name} yet to call the momentum.`;
+  const w = momentumWord(m.delta);
+  return `${loc.name} is ${w}. Compared with the week before, conditions have moved `
+    + `${signed(m.delta, 0)} points on the disruption scale`
+    + (Math.abs(m.delta) < 5 ? ', which is basically flat.' : '.');
+}
+
+/* Plain by default. The index breakdown is still one "why" away. */
 function briefRisk(loc) {
-  const v = liveVars(loc);
-  if (!v) return `No live data for ${loc.name} yet.`;
-  const ix = computeIndices(loc.region, v);
-  const top = IX_META.filter(m => m.k !== 'disruption')
-    .map(m => ({ ...m, val: ix[m.k] })).sort((a, b) => b.val - a.val)[0];
-  return `${loc.name}. Drought ${Math.round(ix.drought)}, flood ${Math.round(ix.flood)}, `
-    + `heat ${Math.round(ix.heat)}, fire ${Math.round(ix.fire)}. `
-    + `Leading risk is ${top.label.toLowerCase()}. Overall disruption ${Math.round(ix.disruption)}.`;
+  const pl = plainSummary(loc);
+  if (!pl) return `No live data for ${loc.name} yet.`;
+  const m = pl.mom;
+  const trend = m && num(m.delta) && Math.abs(m.delta) >= 5
+    ? ` Over the past three weeks it has been ${momentumWord(m.delta)}.` : '';
+  const sk = skillOf(loc);
+  const acc = sk ? ` For what it is worth, my forecasts here have been right about ${Math.round(sk.overall)} percent of the time over ${sk.n} checks.` : '';
+  return `${pl.headline} ${pl.bullets[2]}${trend}${acc} Ask me why if you want the numbers behind that.`;
 }
 
 function briefCrisis() {
@@ -3399,7 +3755,9 @@ const HELP = 'I can do four kinds of thing. One: report — status, alerts, cris
   + 'what should I do. Four: control — open synthesis, simulate strong El Niño, set El Niño to two, '
   + 'rainfall to forty percent, celsius, refresh, mute, stop listening. '
   + 'I keep track of what we were discussing, so you can just say “why?” or “what about Beirut?” and '
-  + 'I will carry the subject across.';
+  + 'I will carry the subject across. You can also ask about momentum — is this getting worse — '
+  + 'and about how accurate I have actually been, which I measure by checking my own past forecasts '
+  + 'against what really happened.';
 
 /* Spoken numbers arrive as words often enough to be worth handling. */
 const WORD_NUM = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8,
@@ -3523,6 +3881,14 @@ function runCommand(raw) {
   const subject = loc || locById(state.selected);
   const remember = (m, i) => { CONV.loc = subject ? subject.id : CONV.loc; CONV.metric = m || CONV.metric; CONV.intent = i; };
 
+  if (has('accurate', 'accuracy', 'how good are you', 'track record', 'reliable are you', 'trust you')) {
+    remember(metric, 'skill');
+    return respond(`For ${subject.name}: ${skillLine(subject)}`);
+  }
+  if (has('momentum', 'getting worse', 'getting better', 'trend', 'direction', 'improving')) {
+    goTo(subject, 'synth'); remember(metric, 'momentum');
+    return respond(briefMomentum(subject));
+  }
   const wantsWhy     = /\bwhy\b|\bhow come\b|what.s (driving|behind|causing)|what is (driving|behind|causing)/.test(t);
   const wantsWhat    = /\bwhat (is|are|does|do)\b|\bwhat.s\b|\bexplain\b|\bdefine\b|\bmean(s|ing)?\b|\btell me about\b|\bhow does\b|\bhow do you\b/.test(t);
   const wantsAdvice  = /\b(advise|advice|recommend|suggest|what should i|should i|what do i do|do about|prepare|mitigat|action)\b/.test(t);
@@ -3618,7 +3984,7 @@ function findAllLocations(t) {
       if (i >= 0 && i < at) at = i;
     }
     if (at < Infinity) {
-      const loc = SPOTLIGHTS.find(x => x.id === id);
+      const loc = MAIN().find(x => x.id === id);
       if (loc) hits.push({ loc, at });
     }
   }
@@ -3764,7 +4130,7 @@ function boot() {
   renderRules();
   initVoice();
   setView(state.view);
-  for (const loc of [...SPOTLIGHTS, ...state.watch]) {
+  for (const loc of [...MAIN(), ...state.watch]) {
     const c = store.get('norm:' + keyOf(loc), 60 * 864e5);
     if (c) state.norm[keyOf(loc)] = c;
   }
