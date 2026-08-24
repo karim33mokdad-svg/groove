@@ -28,7 +28,7 @@ search.
 - A live watch strip: heat, heavy rain, damaging wind and large anomalies
   across everything being tracked.
 
-**Four tabs**
+**Six tabs**
 
 - **Overview** — the ENSO state, spotlight cards and per-location detail.
 - **Crisis watch** — observed fires, floods, storms and droughts from NASA
@@ -45,23 +45,6 @@ search.
   weak-signal regions get a near-zero ENSO push by construction rather than
   by disclaimer.
 
-**Momentum and measured accuracy**
-
-Momentum comes from the last three weeks of *observed* weather, refetched on
-every load — so a city added a minute ago has real momentum immediately,
-rather than waiting for this browser to accumulate a record.
-
-Accuracy is measured, not asserted. Every forecast is written down, and once
-the day passes it is scored against what actually happened: temperature error,
-whether the wet/dry call was right, and a running signed bias. A fresh browser
-honestly reports "no track record yet" instead of inventing a number. Once
-there are at least eight verified days, the learned warm/cool bias is
-subtracted from the model's temperature input and the correction is stated on
-screen.
-
-Any city can be searched and promoted to a main city — it is calibrated
-against its own 2010–2024 normals and observed history on the spot, so it is
-valid immediately rather than showing placeholders.
 - **News & alerts** — two panes. *Your alerts* are raised from the dashboard's
   own data (thresholds crossed, momentum shifts, criteria firing, events near
   a tracked city) and carry an unread state that persists per device, with an
@@ -87,6 +70,24 @@ valid immediately rather than showing placeholders.
   sliders are still there under *Adjust the individual conditions* for anyone
   who wants them. Alerts are evaluated against both the scenario and live
   conditions right now, and persist in the browser.
+
+**Momentum and measured accuracy**
+
+Momentum comes from the last three weeks of *observed* weather, refetched on
+every load — so a city added a minute ago has real momentum immediately,
+rather than waiting for this browser to accumulate a record.
+
+Accuracy is measured, not asserted. Every forecast is written down, and once
+the day passes it is scored against what actually happened: temperature error,
+whether the wet/dry call was right, and a running signed bias. A fresh browser
+honestly reports "no track record yet" instead of inventing a number. Once
+there are at least eight verified days, the learned warm/cool bias is
+subtracted from the model's temperature input and the correction is stated on
+screen.
+
+Any city can be searched and promoted to a main city — it is calibrated
+against its own 2010–2024 normals and observed history on the spot, so it is
+valid immediately rather than showing placeholders.
 
 The risk model is a transparent heuristic, not a validated forecast model.
 It is built for comparing scenarios, not for predicting outcomes.
