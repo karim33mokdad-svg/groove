@@ -27,18 +27,33 @@ search.
   **lower** than a raw anomaly and is the honest yardstick for the
   ±0.5 / 1.0 / 1.5 / 2.0 °C thresholds.
 
-  The page fetches `RONI.ascii.txt` and `oni.ascii.txt` from
-  `cpc.ncep.noaa.gov/data/indices/` — the series behind the published tables,
-  back to 1950 — and the latest 3-month season drives the phase, the strength
-  and the ENSO term in the risk model. RONI leads; ONI comes along because it
-  is the long homogeneous record, which is what lets the card say where this
-  event actually ranks and what it last compared with.
+  The page fetches four plain files from `cpc.ncep.noaa.gov/data/indices/`:
+  `RONI.ascii.txt` and `oni.ascii.txt` (the 3-month seasonal indices behind
+  the published tables, back to 1950) and `rel_wksst9120.txt` and
+  `wksst9120.for` (the weekly SSTs, updated Mondays).
 
-  The page's own estimate is now the **fallback**, for between CPC's monthly
-  updates and for when CPC is unreachable. It is a *raw* Niño 3.4 anomaly, so
-  it carries exactly the trend RONI removes and runs high — and when it is
-  what's on screen, the card says so and the strength label reads "… on the
-  raw index — RONI reads lower" instead of claiming an official grade.
+  **Seasonal classifies, weekly tells you where it is now.** A 3-month mean
+  cannot be current — the newest season CPC can publish is centred about six
+  weeks back, and that lag is the price of the smoothing that makes it a
+  classification rather than noise. So seasonal RONI drives the phase, the
+  strength and the ENSO term in the risk model, and the weekly files fill in
+  the present: latest weekly value, the 4-week trend, and an 18-month chart of
+  the official weekly series. The weekly numbers are deliberately *not* fed to
+  the risk model — reacting to one noisy week is what the 3-month mean exists
+  to prevent.
+
+  The two weekly rows sit side by side on purpose: `rel_wksst9120.txt` has the
+  tropical mean already subtracted (the weekly analogue of RONI),
+  `wksst9120.for` does not, so the difference between them *is* the RONI
+  correction — measured from NOAA's own data for the current week rather than
+  asserted. ONI comes along for the long homogeneous record, which is what
+  lets the card say where this event ranks and what it last compared with.
+
+  The page's own Niño 3.4 estimate is now only the **fallback**, for when CPC
+  is unreachable. It is a *raw* anomaly from a six-point model sample, so it
+  carries exactly the trend RONI removes and runs high — and when it is what's
+  on screen, the card says so and the strength label reads "… on the raw index
+  — RONI reads lower" instead of claiming an official grade.
   Pinning a value by hand is still there as a last resort; a live read always
   supersedes it, and the card says when that is happening.
 - Live conditions and a 7-day forecast per location.

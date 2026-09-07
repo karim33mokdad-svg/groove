@@ -783,11 +783,13 @@
       </div>
       <div>
         <div class="kv"><span id="sstLabel">Niño 3.4 SST now</span><b id="sstNow">–</b></div>
-        <div class="kv"><span id="anom90Label">Multi-week mean anomaly</span><b id="anom90">–</b></div>
-        <div class="kv"><span>30-day trend</span><b id="anomTrend">–</b></div>
+        <div class="kv"><span id="weekRelLabel">Latest week, relative</span><b id="weekRel">–</b></div>
+        <div class="kv"><span id="weekRawLabel">Latest week, raw</span><b id="weekRaw">–</b></div>
+        <div class="kv"><span id="anomTrendLabel">Recent trend</span><b id="anomTrend">–</b></div>
         <div class="kv"><span>Official CPC RONI</span><b id="roniOfficial">–</b></div>
         <div class="kv"><span>Official CPC ONI</span><b id="oniOfficial">–</b></div>
         <div class="kv" id="rankRow" hidden><span>Rank since 1950</span><b id="oniRank">–</b></div>
+        <div class="kv" id="estRow" hidden><span id="anom90Label">This page's estimate</span><b id="anom90">–</b></div>
       </div>
       <div class="xs dim" style="line-height:1.45">
         <span id="basisNote"></span><br>
@@ -1135,11 +1137,21 @@
   <p>Everything refreshes from live sources each time you open the page (and every 15 minutes while it's open).
      Nothing is stored on a server — the watch list and cached climatology live in your browser.</p>
   <h4>ENSO state</h4>
-  <p>The headline number is <b>the official index, read live from CPC</b>. Every refresh fetches
-     <code>RONI.ascii.txt</code> and <code>oni.ascii.txt</code> from
-     <code>cpc.ncep.noaa.gov/data/indices/</code> — the same series behind the published tables, going back
-     to 1950 — and the most recent 3-month season becomes the phase, the strength and the ENSO term in the
-     risk model. Nothing has to be pinned by hand.</p>
+  <p>The headline number is <b>the official index, read live from CPC</b>. Every refresh fetches four plain
+     files from <code>cpc.ncep.noaa.gov/data/indices/</code>: <code>RONI.ascii.txt</code> and
+     <code>oni.ascii.txt</code> (the 3-month seasonal indices behind the published tables, back to 1950),
+     and <code>rel_wksst9120.txt</code> and <code>wksst9120.for</code> (the weekly SSTs, updated Mondays).
+     Nothing has to be pinned by hand.</p>
+  <p><b>Why both.</b> A 3-month mean cannot be current: the newest season CPC can publish is centred about
+     six weeks back, and that lag is the price of the smoothing that makes it a classification rather than
+     noise. So the seasonal RONI sets the phase, the strength and the ENSO term in the risk model, while the
+     weekly files answer "where is it right now" — and the card shows both rather than making you infer the
+     gap. The weekly figures are deliberately <i>not</i> fed to the risk model: reacting to one noisy week is
+     exactly what the 3-month mean exists to prevent.</p>
+  <p>The two weekly rows sit side by side on purpose. <code>rel_wksst9120.txt</code> already has the tropical
+     mean subtracted — it is the weekly analogue of RONI — and <code>wksst9120.for</code> does not. The
+     difference between them <i>is</i> the RONI correction, measured from NOAA's own data for the current
+     week rather than asserted from a number someone quoted once.</p>
   <p><b>RONI, not ONI.</b> Since 1 February 2026 (NWS Public Information Statement 26-05) NOAA monitors and
      classifies ENSO on the Relative Oceanic Niño Index: the Niño 3.4 anomaly minus the 20°N–20°S tropical
      mean, rescaled to the ONI's variance. Subtracting the tropical mean removes the global warming trend
@@ -1760,6 +1772,71 @@ const CPC_INDEX = {
   oni:  'https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt',
 };
 
+/* RONI and ONI are 3-month means, so the newest season they can publish is
+   centred about six weeks back — that lag is what the smoothing costs, not a
+   stale page. CPC also publishes the underlying weekly SSTs, updated Mondays,
+   which is the "where is it right now" the seasonal means cannot give:
+
+     rel_wksst9120.txt  weekly RELATIVE anomalies — tropical mean already
+                        subtracted, so this is the weekly analogue of RONI and
+                        the right thing to read next to it.
+     wksst9120.for      weekly raw SST and anomaly for all four Niño regions.
+                        Carried because the difference between the two is the
+                        RONI correction, measured rather than asserted.
+
+   Weekly values are noisy by construction; the 3-month mean exists to filter
+   exactly that. So the weekly figures inform, and the seasonal index still
+   classifies. */
+const CPC_WEEKLY = {
+  rel: 'https://www.cpc.ncep.noaa.gov/data/indices/rel_wksst9120.txt',
+  raw: 'https://www.cpc.ncep.noaa.gov/data/indices/wksst9120.for',
+};
+
+const MON3 = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+/* Both weekly files key on a DDMMMYYYY week-centre date. The raw file is a
+   Fortran fixed-width table, so a negative anomaly runs straight into the SST
+   before it ("26.6-0.4") with no separating space — hence pulling every signed
+   decimal off the line rather than splitting on whitespace. Four values means
+   the relative file (one anomaly per region); eight means the raw file (an SST
+   and an anomaly per region), and Niño 3.4 is the third region either way. */
+function parseCpcWeekly(text) {
+  const out = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const m = line.trim().match(/^(\d{2})([A-Z]{3})(\d{4})\s+(.*)$/i);
+    if (!m) continue;
+    const mi = MON3.indexOf(m[2].toUpperCase());
+    if (mi < 0) continue;
+    const nums = (m[4].match(/-?\d+\.\d+/g) || []).map(Number);
+    let n34 = null;
+    if (nums.length === 4) n34 = nums[2];            // relative: anomalies only
+    else if (nums.length === 8) n34 = nums[5];       // raw: SST, anomaly per region
+    else continue;
+    if (!num(n34) || Math.abs(n34) > 8) continue;
+    out.push({
+      d: `${m[3]}-${String(mi + 1).padStart(2, '0')}-${m[1]}`,
+      n34,
+      sst: nums.length === 8 ? nums[4] : null,
+    });
+  }
+  out.sort((a, b) => a.d < b.d ? -1 : 1);
+  return out;
+}
+
+function summariseWeekly(rows) {
+  if (rows.length < 50) return null;
+  const last = rows[rows.length - 1];
+  const mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+  const recent = mean(rows.slice(-4).map(r => r.n34));
+  const older  = mean(rows.slice(-13, -9).map(r => r.n34));
+  return {
+    value: last.n34, date: last.d, sst: last.sst,
+    trend: num(recent) && num(older) ? recent - older : null,
+    weeks: rows.length,
+    series: rows.slice(-78).map(r => ({ d: r.d, a: r.n34 })),   // ~18 months
+  };
+}
+
 const SEASONS = ['DJF','JFM','FMA','MAM','AMJ','MJJ','JJA','JAS','ASO','SON','OND','NDJ'];
 
 /* Both files are whitespace-delimited with a header line. ONI carries
@@ -1852,14 +1929,21 @@ async function loadOfficialIndices() {
   if (cached) { state.cpc = cached; return; }
 
   const out = {};
-  await Promise.all(Object.entries(CPC_INDEX).map(async ([k, url]) => {
-    /* One failing file must not cost us the other, and neither failing costs us
-       the estimate or the manual pin. */
+  /* One failing file must not cost us the others, and none of them failing
+     costs us the estimate or the manual pin. */
+  const grab = async (k, url, parse) => {
     try {
-      const s = summariseCpc(parseCpcIndex(await fetchVia(url, 'text', 20000)));
+      const s = parse(await fetchVia(url, 'text', 20000));
       if (s) out[k] = s;
     } catch (e) { console.warn('CPC ' + k + ' unavailable:', e && e.message); }
-  }));
+  };
+
+  await Promise.all([
+    ...Object.entries(CPC_INDEX).map(([k, u]) =>
+      grab(k, u, t => summariseCpc(parseCpcIndex(t)))),
+    ...Object.entries(CPC_WEEKLY).map(([k, u]) =>
+      grab('wk_' + k, u, t => summariseWeekly(parseCpcWeekly(t)))),
+  ]);
 
   if (!out.roni && !out.oni) throw new Error('CPC index files unreachable');
   out.fetchedAt = Date.now();
@@ -2246,17 +2330,48 @@ function renderEnso() {
   $('#scaleMark').style.left = clamp(((num(h) ? h : 0) + 3) / 6 * 100, 1, 99) + '%';
   $('#scaleMark').style.opacity = num(h) ? 1 : .25;
 
-  $('#sstLabel').textContent = e && e.absolute ? 'Niño 3.4 SST now' : 'Niño 3.4 proxy now';
-  $('#sstNow').textContent  = e && num(e.sst) ? fx(T(e.sst), 1) + ' ' + U() : '–';
-  $('#anom90').textContent  = e && e.absolute && num(e.anom90) ? signed(e.anom90) + ' °C' : '–';
-  /* The marine API serves at most 60 past days, so the mean is over whatever came
-     back — call it what it is rather than labelling it "90-day". */
-  $('#anom90Label').textContent = e && e.days ? `${e.days}-day mean anomaly` : 'Multi-week mean anomaly';
-  $('#anomTrend').textContent = e && num(e.trend)
-    ? (e.trend > 0.08 ? 'warming ' : e.trend < -0.08 ? 'cooling ' : 'steady ') + signed(e.trend, 2) + ' °C' : '–';
+  const c = state.cpc || {};
+  const wkDate = d => new Date(d + 'T12:00:00Z')
+    .toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+  /* CPC's own weekly SST beats our model sample, so use it for the SST row and
+     keep the model figure only as the fallback. */
+  const wkSst = c.wk_raw && num(c.wk_raw.sst) ? c.wk_raw.sst : null;
+  $('#sstLabel').textContent = num(wkSst) ? 'Niño 3.4 SST, CPC weekly'
+    : e && e.absolute ? 'Niño 3.4 SST now' : 'Niño 3.4 proxy now';
+  $('#sstNow').textContent = num(wkSst) ? fx(T(wkSst), 1) + ' ' + U()
+    : e && num(e.sst) ? fx(T(e.sst), 1) + ' ' + U() : '–';
+
+  /* The two weekly rows side by side are the RONI correction made visible:
+     same week, same box, one with the tropical mean removed and one without. */
+  const wkRow = (s, el, lbl, name) => {
+    $(el).textContent = s && num(s.value) ? signed(s.value, 2) + ' °C (w/e ' + wkDate(s.date) + ')' : '–';
+    $(lbl).textContent = name;
+  };
+  wkRow(c.wk_rel, '#weekRel', '#weekRelLabel', 'Latest week, relative');
+  wkRow(c.wk_raw, '#weekRaw', '#weekRawLabel', 'Latest week, raw');
+  if (c.wk_rel && c.wk_raw && num(c.wk_rel.value) && num(c.wk_raw.value))
+    $('#weekRawLabel').textContent = 'Latest week, raw (+'
+      + (c.wk_raw.value - c.wk_rel.value).toFixed(2) + ' vs relative)';
+
+  /* Prefer CPC's weekly trend over the model's: same quantity, official source. */
+  const tr = c.wk_rel && num(c.wk_rel.trend) ? { v: c.wk_rel.trend, lbl: 'Trend, last 4 weeks' }
+    : e && num(e.trend) ? { v: e.trend, lbl: '30-day trend (estimate)' } : null;
+  $('#anomTrendLabel').textContent = tr ? tr.lbl : 'Recent trend';
+  $('#anomTrend').textContent = tr
+    ? (tr.v > 0.08 ? 'warming ' : tr.v < -0.08 ? 'cooling ' : 'steady ') + signed(tr.v, 2) + ' °C' : '–';
+
+  /* The page's own estimate is now a cross-check, not the headline — shown only
+     when it exists, and always named as ours. */
+  const showEst = !!(e && e.absolute && num(e.anom90));
+  $('#estRow').hidden = !showEst;
+  if (showEst) {
+    $('#anom90').textContent = signed(e.anom90) + ' °C';
+    $('#anom90Label').textContent = `This page's estimate (${e.days}-day raw)`;
+  }
+
   /* Show the live CPC figure where we have one, and fall back to whatever was
      pinned by hand, saying which of the two is on screen. */
-  const c = state.cpc || {};
   const row = (liveVal, pinVal, pinSeason) => liveVal && num(liveVal.value)
     ? signed(liveVal.value, 2) + ' °C (' + liveVal.season + ')'
     : num(pinVal) ? signed(pinVal, 2) + ' °C' + (pinSeason ? ' (' + pinSeason + ')' : '') + ' — pinned by hand'
@@ -2270,11 +2385,19 @@ function renderEnso() {
   $('#rankRow').hidden = !rk;
   if (rk) $('#oniRank').textContent = rk.text;
 
+  /* The seasonal index lags by design — three months of smoothing costs you
+     about six weeks of currency. Saying so, and pointing at the weekly row, is
+     the difference between a stale-looking number and an understood one. */
   $('#basisNote').innerHTML = basis.official
     ? `Phase and strength follow the ${basis.live
         ? `<b>live CPC ${esc(basis.short)}</b> file` : `hand-pinned <b>${esc(basis.short)}</b>`}`
-      + `${basis.season ? ' for ' + esc(basis.season) : ''}, not this page's own estimate`
-      + `${e && e.absolute && num(e.anom90) ? ` (which currently reads ${signed(e.anom90)} °C raw)` : ''}.`
+      + `${basis.season ? ' for ' + esc(basis.season) : ''}. That is a 3-month mean, so the newest `
+      + `season CPC can publish is centred about six weeks back — the smoothing is what makes it a `
+      + `classification rather than noise. `
+      + (c.wk_rel && num(c.wk_rel.value)
+          ? `For where it is <i>now</i>, read the weekly rows above: relative ${signed(c.wk_rel.value, 2)} °C `
+            + `for the week ending ${wkDate(c.wk_rel.date)}.`
+          : `The weekly files could not be reached, so there is no more current official reading here.`)
       + (pinSuperseded() ? ' Your hand-pinned value is being superseded by the live read.' : '')
     : `Indicative estimate from live model SST vs the 1991–2020 climatology — <b>not</b> an official index.`
       + ` CPC's own files could not be reached, so pin a value by hand to fix the phase.`;
@@ -2282,12 +2405,29 @@ function renderEnso() {
   $('#ensoCompare').innerHTML = rk && rk.compare ? esc(rk.compare) + ' ' : '';
 
   const chip = $('#trendChip');
-  if (e && num(e.trend)) {
-    chip.textContent = (e.trend > 0.08 ? '↗ warming' : e.trend < -0.08 ? '↘ cooling' : '→ steady');
-    chip.className = 'chip ' + (e.trend > 0.08 ? 'warm' : e.trend < -0.08 ? 'cool' : '');
+  if (tr) {
+    chip.textContent = (tr.v > 0.08 ? '↗ warming' : tr.v < -0.08 ? '↘ cooling' : '→ steady');
+    chip.className = 'chip ' + (tr.v > 0.08 ? 'warm' : tr.v < -0.08 ? 'cool' : '');
   } else chip.textContent = '–';
 
-  if (e && e.series && e.series.length) {
+  /* Plot CPC's weekly relative series when we have it: eighteen months of the
+     official quantity beats two months of our own sample, and it is the series
+     the seasonal index is actually built from. */
+  const wkSeries = c.wk_rel && c.wk_rel.series && c.wk_rel.series.length >= 8 ? c.wk_rel : null;
+  if (wkSeries) {
+    $('#trendRange').textContent = `last ${wkSeries.series.length} weeks · CPC weekly relative Niño 3.4`;
+    const s = wkSeries.series;
+    const step = Math.max(1, Math.floor(s.length / 4));
+    const labels = [];
+    for (let i = 0; i < s.length; i += step)
+      labels.push({ i, text: new Date(s[i].d + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', year: '2-digit' }) });
+    lineChart($('#ensoChart'), s.map(x => ({ y: x.a })), {
+      color: (h ?? 0) >= 0.5 ? '#ff8a4c' : (h ?? 0) <= -0.5 ? '#56b8ff' : '#3fc9ff',
+      zero: 0, gid: 1, labels, fmt: v => signed(v, 1),
+      min: Math.min(-0.6, ...s.map(x => x.a)) - 0.15,
+      max: Math.max(0.6, ...s.map(x => x.a)) + 0.15,
+    });
+  } else if (e && e.series && e.series.length) {
     $('#trendRange').textContent = `last ${e.days} days · ${e.source}`
       + (e.absolute ? '' : ' · shown against its own mean');
     const s = e.series;
@@ -4638,7 +4778,16 @@ function snapshot() {
       index_basis: headlineBasis().plain,
       index_is_official: headlineBasis().official,
       index_season: headlineBasis().season || null,
+      index_note: headlineBasis().official
+        ? 'The seasonal index is a 3-month mean, so it lags by about six weeks by design. '
+          + 'The weekly figures are the current state; the seasonal one is the classification.'
+        : null,
       historical_context: (ensoRank() || {}).compare || null,
+      latest_week_relative_c: state.cpc && state.cpc.wk_rel && num(state.cpc.wk_rel.value)
+        ? +state.cpc.wk_rel.value.toFixed(2) : null,
+      latest_week_raw_c: state.cpc && state.cpc.wk_raw && num(state.cpc.wk_raw.value)
+        ? +state.cpc.wk_raw.value.toFixed(2) : null,
+      latest_week_ending: state.cpc && state.cpc.wk_rel ? state.cpc.wk_rel.date : null,
       phase: ph.name,
       strength: ph.strength || null,
       strength_caveat: headlineBasis().official ? null
@@ -5113,10 +5262,15 @@ function briefEnso() {
   const h = headlineAnom(), ph = phaseOf(h), b = headlineBasis();
   if (!num(h)) return 'The ENSO phase is not calibrated right now — C P C is unreachable and I have no sea-surface data. Pin a value by hand to fix that.';
   if (b.official) {
-    const rk = ensoRank();
+    const rk = ensoRank(), wk = state.cpc && state.cpc.wk_rel;
     return `${ph.name}. ${ph.strength}. That is the ${b.live ? 'official' : 'hand-pinned'} `
       + `${b.key === 'roni' ? 'R O N I' : 'O N I'}${b.season ? ' for ' + b.season : ''}, at ${signed(h, 2)} degrees`
-      + `${rk && rk.text && rk.text.includes('strongest') ? ', the ' + rk.text : ''}.`;
+      + `${rk && rk.text && rk.text.includes('strongest') ? ', the ' + rk.text : ''}. `
+      + (wk && num(wk.value)
+          ? `That is a three month mean, so it lags about six weeks. The latest weekly relative reading is `
+            + `${signed(wk.value, 2)} degrees, and it is `
+            + `${num(wk.trend) ? (wk.trend > 0.08 ? 'warming' : wk.trend < -0.08 ? 'cooling' : 'holding steady') : 'flat'}.`
+          : '');
   }
   return `${ph.name}. The raw Niño 3.4 anomaly is ${signed(h)} degrees, which is ${ph.strength.toLowerCase()} `
     + `on the raw index. One caveat: NOAA classifies on R O N I now, which subtracts the tropical mean and `
