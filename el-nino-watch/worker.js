@@ -6,15 +6,16 @@
  * deployment decision rather than something baked into the page: the page
  * always calls this Worker, and this Worker decides who answers.
  *
+ *   PROVIDER = "anthropic"   → Anthropic API (default). Needs ANTHROPIC_API_KEY.
  *   PROVIDER = "workers-ai"  → Cloudflare Workers AI. No extra key, runs on
- *                              Cloudflare's own free allocation.
- *   PROVIDER = "anthropic"   → Anthropic API, needs ANTHROPIC_API_KEY.
+ *                              Cloudflare's own free allocation, but weaker
+ *                              prose than the Anthropic models.
  *
  * Deploy:
  *   npm install -g wrangler && wrangler login
  *   wrangler deploy                                  (from this directory)
  *   wrangler secret put SHARED_SECRET                (any random string)
- *   wrangler secret put ANTHROPIC_API_KEY            (only if PROVIDER=anthropic)
+ *   wrangler secret put ANTHROPIC_API_KEY            (required on the default)
  *
  * Then paste into the dashboard under Claude → proxy URL:
  *   https://elnino-proxy.<you>.workers.dev/?s=<your-shared-secret>
@@ -134,7 +135,9 @@ export default {
     body.max_tokens = Math.min(Number(body.max_tokens) || 1000, MAX_TOKENS_CAP);
     delete body.stream;                    // this proxy returns whole responses only
 
-    const provider = (new URL(request.url).searchParams.get('provider') || env.PROVIDER || 'workers-ai')
+    /* Anthropic unless told otherwise — chosen for reliability. Workers AI
+       remains available via PROVIDER or ?provider=workers-ai. */
+    const provider = (new URL(request.url).searchParams.get('provider') || env.PROVIDER || 'anthropic')
       .toLowerCase();
 
     try {

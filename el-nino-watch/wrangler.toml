@@ -1,6 +1,7 @@
 # Cloudflare Worker config for the El Niño Watch model proxy.
 #   wrangler deploy                        (from this directory)
 #   wrangler secret put SHARED_SECRET      (any random string)
+#   wrangler secret put ANTHROPIC_API_KEY  (required on the default provider)
 #
 # Switch provider by editing PROVIDER below and redeploying, or per-request by
 # appending &provider=anthropic to the proxy URL — handy for comparing the two
@@ -15,12 +16,9 @@ compatibility_date = "2026-01-01"
 binding = "AI"
 
 [vars]
-PROVIDER = "workers-ai"
+PROVIDER = "anthropic"
 
-# Any Workers AI text-generation model. Check the current catalogue in the
-# Cloudflare dashboard — model names and the free allocation change over time,
-# and a name that has been retired will fail with "no text returned".
+# Only used when PROVIDER = "workers-ai" or ?provider=workers-ai. Check the
+# current catalogue in the Cloudflare dashboard — model names and the free
+# allocation change over time, and a retired name fails with "no text returned".
 WORKERS_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
-
-# Only needed when PROVIDER = "anthropic":
-#   wrangler secret put ANTHROPIC_API_KEY

@@ -184,12 +184,15 @@ backstop.
 **Which model answers is a deployment decision, not a code change.** The page
 always calls the proxy; the proxy picks the provider:
 
-- `PROVIDER = "workers-ai"` (default) — Cloudflare Workers AI. The model runs
-  inside the Worker on Cloudflare's own allocation, so there is no second API
-  key and no cross-origin problem at all. Free within their limits.
-- `PROVIDER = "anthropic"` — the Anthropic API, needing `ANTHROPIC_API_KEY`.
+- `PROVIDER = "anthropic"` (default) — the Anthropic API, needing
+  `ANTHROPIC_API_KEY`. Chosen for reliability: it follows the no-invented-
+  figures instruction more consistently and writes better prose.
+- `PROVIDER = "workers-ai"` — Cloudflare Workers AI. The model runs inside the
+  Worker on Cloudflare's own allocation, so there is no second API key and no
+  cross-origin problem at all. Free within their limits, at some cost in
+  quality.
 
-Append `&provider=anthropic` to the proxy URL to override per request, which
+Append `&provider=workers-ai` to the proxy URL to override per request, which
 makes it easy to compare the two on the same briefing.
 
 **No invented figures — checked, not trusted.** Every number in the model's
