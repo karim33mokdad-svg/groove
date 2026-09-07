@@ -783,13 +783,17 @@
       </div>
       <div>
         <div class="kv"><span id="sstLabel">Niño 3.4 SST now</span><b id="sstNow">–</b></div>
-        <div class="kv"><span>90-day mean anomaly</span><b id="anom90">–</b></div>
+        <div class="kv"><span id="anom90Label">Multi-week mean anomaly</span><b id="anom90">–</b></div>
         <div class="kv"><span>30-day trend</span><b id="anomTrend">–</b></div>
+        <div class="kv"><span>Official CPC RONI</span><b id="roniOfficial">not set</b></div>
         <div class="kv"><span>Official CPC ONI</span><b id="oniOfficial">not set</b></div>
       </div>
       <div class="xs dim" style="line-height:1.45">
-        Indicative estimate from live model SST vs the 1991–2020 climatology — not the official ONI.
-        <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php" target="_blank" rel="noopener">Check CPC</a> ·
+        <span id="basisNote">Indicative estimate from live model SST vs the 1991–2020 climatology — not an official index.</span><br>
+        Since 1 Feb 2026 (NWS PIS 26-05) NOAA classifies ENSO on <b>RONI</b>, which subtracts the global
+        tropical mean and so reads <b>lower</b> than the raw Niño 3.4 anomaly shown here.
+        <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/roni/" target="_blank" rel="noopener">RONI</a> ·
+        <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/oni/v6/" target="_blank" rel="noopener">ONI (ERSSTv6)</a> ·
         <button id="setOni" class="xs" style="color:var(--accent);text-decoration:underline">pin the official value</button>
       </div>
     </section>
@@ -1130,10 +1134,22 @@
   <h4>ENSO state</h4>
   <p>Six points across the Niño 3.4 box (5°N–5°S, 170°W–120°W) are sampled for sea-surface temperature from
      Open-Meteo's marine model. The average is compared to the standard 1991–2020 monthly climatology for that
-     box to give an anomaly, and a 90-day mean approximates the ONI's 3-month smoothing.
-     This is an <b>indicative estimate</b>: the model SST carries its own bias, so it can differ from NOAA CPC's
-     official ONI by a few tenths. Pin the official value from CPC when it updates (monthly) and it will be
-     shown alongside — the phase label then follows the pinned value.</p>
+     box to give an anomaly, and the mean over the whole fetched window (about two months — the marine API
+     serves at most 60 past days) stands in for the ONI's 3-month smoothing.</p>
+  <p>Two things make this an <b>indicative estimate</b> rather than an official index, and both push the same way:</p>
+  <ul>
+    <li>Six point samples of one model are not an area average of the box, and the model carries its own
+        SST bias against the ERSST analysis CPC uses — worth a few tenths either way.</li>
+    <li>More importantly, this is a <b>raw</b> Niño 3.4 anomaly against a fixed 1991–2020 base. Since
+        1 February 2026 (NWS Public Information Statement 26-05) NOAA classifies ENSO on the
+        <b>Relative Oceanic Niño Index (RONI)</b>, which subtracts the 20°N–20°S tropical mean anomaly
+        before applying the ±0.5 / 1.0 / 1.5 / 2.0 °C thresholds. Because the whole tropical belt has
+        warmed, RONI reads materially lower than the raw anomaly — in mid-2026 the gap was around 0.4 °C
+        on the 3-month means. So a raw number here will overstate the official event strength.</li>
+  </ul>
+  <p>Pin the official RONI (and, if you like, the ONI) from CPC when they update — monthly — and the phase
+     label, the strength classification and the ENSO term in the risk model all follow the pinned RONI
+     instead of the estimate. Until then the strength label is marked as being on the raw basis.</p>
   <h4>Local anomalies</h4>
   <p>For each location the daily normal is built from the ERA5 archive over 2010–2024, smoothed over a ±7-day
      window around each calendar day. "+3.1° vs normal" means today's mean temperature is 3.1 °C above that
@@ -1150,14 +1166,24 @@
 </dialog>
 
 <dialog id="oniDlg">
-  <h3>Pin the official ONI</h3>
-  <p>NOAA CPC publishes the Oceanic Niño Index monthly. Enter the latest value here and the dashboard will
-     show it as the authoritative number and label the phase from it.
-     <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/ensostuff/ONI_v5.php" target="_blank" rel="noopener">Open the CPC table</a>.</p>
-  <label class="fld"><span>Latest ONI value (°C, e.g. -0.4)</span>
-    <input id="oniInput" type="number" step="0.1" min="-4" max="4" placeholder="-0.4"></label>
-  <label class="fld"><span>Season label (e.g. AMJ 2026)</span>
-    <input id="oniSeason" type="text" placeholder="AMJ 2026"></label>
+  <h3>Pin the official index</h3>
+  <p>NOAA CPC updates these monthly. Whatever you pin becomes the authoritative number: the phase label,
+     the strength classification and the ENSO term in the risk model all follow it instead of this page's
+     live estimate.</p>
+  <p><b>RONI is the one that counts.</b> Since 1 Feb 2026 (NWS PIS 26-05) NOAA monitors and classifies ENSO
+     on the Relative Oceanic Niño Index — Niño 3.4 minus the 20°N–20°S tropical mean, rescaled to the ONI's
+     variance. It reads lower than the raw anomaly this page estimates, so pinning it is the single biggest
+     accuracy gain available here.
+     <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/roni/" target="_blank" rel="noopener">Open the RONI page</a> ·
+     <a href="https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/oni/v6/" target="_blank" rel="noopener">Open the ONI table (ERSSTv6)</a>.</p>
+  <label class="fld"><span>Latest RONI value (°C) — used for the phase and strength</span>
+    <input id="roniInput" type="number" step="0.01" min="-4" max="4" placeholder="1.4"></label>
+  <label class="fld"><span>RONI season label (e.g. JJA 2026)</span>
+    <input id="roniSeason" type="text" placeholder="JJA 2026"></label>
+  <label class="fld"><span>Latest ONI value (°C) — optional, shown for reference only</span>
+    <input id="oniInput" type="number" step="0.01" min="-4" max="4" placeholder="1.39"></label>
+  <label class="fld"><span>ONI season label (e.g. MJJ 2026)</span>
+    <input id="oniSeason" type="text" placeholder="MJJ 2026"></label>
   <div class="row" style="margin-top:18px;justify-content:flex-end">
     <button class="btn" id="oniClear">Clear</button>
     <button class="btn on" id="oniSave">Save</button>
@@ -1540,7 +1566,7 @@ const state = {
   unit: store.get('unit') || 'c',
   selected: store.get('selected') || 'dubai',
   watch: store.get('watch') || DEFAULT_WATCH.slice(),
-  oni: store.get('oni') || null,          // { value, season }
+  oni: store.get('oni') || null,          // { value, season, roni, roniSeason } — pinned official CPC values
   fc: {},                                 // key -> forecast payload
   norm: {},                               // key -> { t:[], p:[], years }
   enso: null,                             // { anom, anom90, trend, sst, series:[{d,a}] , source }
@@ -1776,13 +1802,36 @@ function phaseOf(v) {
            color: 'var(--txt)', glow: 'rgba(120,130,145,.16)' };
 }
 
-/* The value the phase label follows: a pinned official ONI wins, then our own
-   estimate — but only when it rests on real sea-surface temperature. */
+/* The value the phase label follows, in order of authority:
+     1. pinned RONI  — since NWS PIS 26-05 (1 Feb 2026) this is what NOAA actually
+        classifies ENSO on: Niño 3.4 minus the 20°N–20°S tropical mean, rescaled.
+     2. pinned ONI   — the older official index, still published.
+     3. our own raw Niño 3.4 estimate, and only when it rests on real sea-surface
+        temperature rather than the air-temperature proxy.
+   The raw estimate is NOT interchangeable with the first two: it carries the
+   tropical warming trend that RONI removes, so it reads high against the ±0.5 /
+   1.0 / 1.5 / 2.0 thresholds. headlineBasis() says which one is in play so the
+   page can label the difference instead of hiding it. */
 function headlineAnom() {
+  if (state.oni && num(state.oni.roni))  return state.oni.roni;
   if (state.oni && num(state.oni.value)) return state.oni.value;
   if (state.enso && state.enso.absolute) return state.enso.anom90 ?? state.enso.anom;
   return null;
 }
+
+function headlineBasis() {
+  if (state.oni && num(state.oni.roni))  return { key:'roni', official:true,  label:'official CPC RONI',
+    short:'RONI', plain:'official CPC RONI', season: state.oni.roniSeason || '' };
+  if (state.oni && num(state.oni.value)) return { key:'oni',  official:true,  label:'official CPC ONI',
+    short:'ONI',  plain:'official CPC ONI',  season: state.oni.season || '' };
+  if (state.enso && state.enso.absolute) return { key:'est',  official:false, label:'raw Niño 3.4 estimate',
+    short:'Niño 3.4 raw', plain:'raw central-Pacific estimate', season:'' };
+  return { key:'none', official:false, label:'not calibrated', short:'–', plain:'not calibrated', season:'' };
+}
+
+/* Official indices are published to two decimals; our own estimate does not
+   deserve that many, so it keeps one. */
+const signedIdx = (v, official) => signed(v, official ? 2 : 1);
 
 /* Per-location summary used by cards, alerts and the detail view. */
 function summarize(loc) {
@@ -1860,10 +1909,12 @@ function buildAlerts() {
     }
   }
 
-  const h = headlineAnom(), ph = phaseOf(h);
+  const h = headlineAnom(), ph = phaseOf(h), b = headlineBasis();
   if (num(h) && ph.key !== 'neutral')
     out.unshift({ sev: Math.abs(h) >= 1.5 ? 3 : 2, title: `${ph.name} conditions — ${ph.strength.toLowerCase()}`,
-      body: `Niño 3.4 anomaly ${signed(h)} °C. Indonesia and Thailand carry the strongest local signal.` });
+      body: `${b.short} ${signedIdx(h, b.official)} °C`
+        + (b.official ? '' : ' (raw index — official RONI reads lower)')
+        + '. Indonesia and Thailand carry the strongest local signal.' });
 
   out.sort((a, b) => b.sev - a.sev);
   return out.slice(0, 10);
@@ -2017,28 +2068,43 @@ function renderStamp() {
 function renderEnso() {
   const e = state.enso;
   const h = headlineAnom(), ph = phaseOf(h);
-  const uncal = e && !e.absolute && !(state.oni && num(state.oni.value));
+  const basis = headlineBasis();
+  const uncal = basis.key === 'none' || basis.key === 'est' && !(e && e.absolute);
 
   $('#phaseCard').style.setProperty('--phase-glow', ph.glow);
   $('#phaseName').textContent = uncal ? 'Needs calibration' : ph.name;
   $('#phaseName').style.color = uncal ? 'var(--txt-2)' : ph.color;
+  /* The strength words (Weak … Very strong) are defined on the official index.
+     Applying them to the raw estimate would overstate the event, so when that is
+     what we are showing, the label says so rather than passing itself off as the
+     official classification. */
   $('#phaseStrength').textContent = uncal
-    ? 'Sea-surface data unavailable — trend only. Pin the official ONI below.'
-    : (ph.strength || '—');
+    ? 'Sea-surface data unavailable — trend only. Pin the official RONI below.'
+    : basis.official
+      ? (ph.strength || '—') + ' · ' + basis.plain + (basis.season ? ' ' + basis.season : '')
+      : (ph.strength ? ph.strength + ' on the raw index — RONI reads lower' : '—');
   $('#phasePill').textContent = num(h)
-    ? `${ph.name} · Niño 3.4 ${signed(h)} °C`
+    ? `${ph.name} · ${basis.short} ${signedIdx(h, basis.official)} °C`
     : uncal ? 'ENSO phase needs calibration' : 'ENSO state unavailable';
-  $('#anomVal').textContent = signed(h);
+  $('#anomVal').textContent = signedIdx(h, basis.official);
   $('#scaleMark').style.left = clamp(((num(h) ? h : 0) + 3) / 6 * 100, 1, 99) + '%';
   $('#scaleMark').style.opacity = num(h) ? 1 : .25;
 
   $('#sstLabel').textContent = e && e.absolute ? 'Niño 3.4 SST now' : 'Niño 3.4 proxy now';
   $('#sstNow').textContent  = e && num(e.sst) ? fx(T(e.sst), 1) + ' ' + U() : '–';
   $('#anom90').textContent  = e && e.absolute && num(e.anom90) ? signed(e.anom90) + ' °C' : '–';
+  /* The marine API serves at most 60 past days, so the mean is over whatever came
+     back — call it what it is rather than labelling it "90-day". */
+  $('#anom90Label').textContent = e && e.days ? `${e.days}-day mean anomaly` : 'Multi-week mean anomaly';
   $('#anomTrend').textContent = e && num(e.trend)
     ? (e.trend > 0.08 ? 'warming ' : e.trend < -0.08 ? 'cooling ' : 'steady ') + signed(e.trend, 2) + ' °C' : '–';
-  $('#oniOfficial').textContent = state.oni && num(state.oni.value)
-    ? signed(state.oni.value) + ' °C' + (state.oni.season ? ' (' + state.oni.season + ')' : '') : 'not set';
+  const pinned = (v, s) => num(v) ? signed(v, 2) + ' °C' + (s ? ' (' + s + ')' : '') : 'not set';
+  $('#roniOfficial').textContent = pinned(state.oni && state.oni.roni, state.oni && state.oni.roniSeason);
+  $('#oniOfficial').textContent  = pinned(state.oni && state.oni.value, state.oni && state.oni.season);
+  $('#basisNote').innerHTML = basis.official
+    ? `Phase and strength follow the pinned <b>${esc(basis.short)}</b>`
+      + `${basis.season ? ' for ' + esc(basis.season) : ''}. The big number is that pinned value, not this page's estimate.`
+    : `Indicative estimate from live model SST vs the 1991–2020 climatology — <b>not</b> an official index.`;
 
   const chip = $('#trendChip');
   if (e && num(e.trend)) {
@@ -2064,7 +2130,7 @@ function renderEnso() {
       max: Math.max(0.6, ...s.map(x => x.a - off)) + 0.15,
     });
   } else {
-    $('#ensoChart').innerHTML = '<div class="empty">Niño 3.4 series unavailable — check the CPC link for the official ONI.</div>';
+    $('#ensoChart').innerHTML = '<div class="empty">Niño 3.4 series unavailable — pin the official CPC RONI to keep the phase calibrated.</div>';
   }
 
   const dir = { elnino:{5:'much drier',3:'wetter winters',2:'weak signal'},
@@ -2875,9 +2941,11 @@ function buildNotifications() {
   const out = [];
   const add = (id, sev, title, body) => out.push({ id: id + '|' + day, sev, title, body, when: Date.now() });
 
-  const h = headlineAnom(), ph = phaseOf(h);
+  const h = headlineAnom(), ph = phaseOf(h), b = headlineBasis();
   if (num(h) && ph.key !== 'neutral')
-    add(`enso|${ph.key}`, 2, `${ph.name} conditions`, `Niño 3.4 at ${signed(h)} °C — ${ph.strength.toLowerCase()}.`);
+    add(`enso|${ph.key}`, 2, `${ph.name} conditions`,
+      `${b.short} at ${signedIdx(h, b.official)} °C — ${ph.strength.toLowerCase()}`
+      + (b.official ? '.' : ' on the raw index; official RONI reads lower.'));
 
   for (const a of buildAlerts())
     add('alert|' + a.title.replace(/\s+/g, '-').toLowerCase(), a.sev, a.title, a.body);
@@ -3113,8 +3181,10 @@ function renderMapBrief() {
     bits.push('Ocean temperatures have not loaded yet.');
   }
 
-  bits.push(`<b>Phase:</b> ${esc(ph.name)}${num(h) ? `, Niño 3.4 at ${signed(h)} °C` : ' (needs calibration)'}. `
-    + `The dashed box is Niño 3.4 — the patch of ocean the official index is measured over.`);
+  bits.push(`<b>Phase:</b> ${esc(ph.name)}${num(h)
+      ? `, ${esc(headlineBasis().short)} at ${signedIdx(h, headlineBasis().official)} °C` : ' (needs calibration)'}. `
+    + `The dashed box is Niño 3.4 — the patch of ocean both official indices are measured over. `
+    + `NOAA grades events on RONI, which takes this box's anomaly and subtracts the tropical-belt mean.`);
 
   const ev = ((state.crisis && state.crisis.items) || []).filter(e => num(e.lat));
   if (ev.length) bits.push(`<b>${ev.length} live events</b> plotted from satellite and UN feeds — `
@@ -3966,17 +4036,27 @@ $('#ruleList').addEventListener('change', e => {
 $('#about').addEventListener('click', () => $('#aboutDlg').showModal());
 $('#aboutClose').addEventListener('click', () => $('#aboutDlg').close());
 $('#setOni').addEventListener('click', () => {
-  if (state.oni) { $('#oniInput').value = state.oni.value; $('#oniSeason').value = state.oni.season || ''; }
+  if (state.oni) {
+    $('#roniInput').value  = num(state.oni.roni) ? state.oni.roni : '';
+    $('#roniSeason').value = state.oni.roniSeason || '';
+    $('#oniInput').value   = num(state.oni.value) ? state.oni.value : '';
+    $('#oniSeason').value  = state.oni.season || '';
+  }
   $('#oniDlg').showModal();
 });
 $('#oniSave').addEventListener('click', () => {
-  const v = parseFloat($('#oniInput').value);
-  state.oni = num(v) ? { value: v, season: $('#oniSeason').value.trim() } : null;
+  const r = parseFloat($('#roniInput').value), v = parseFloat($('#oniInput').value);
+  state.oni = (num(r) || num(v))
+    ? { roni:  num(r) ? r : null, roniSeason: $('#roniSeason').value.trim(),
+        value: num(v) ? v : null, season:     $('#oniSeason').value.trim() }
+    : null;
   store.set('oni', state.oni);
   $('#oniDlg').close(); render();
 });
 $('#oniClear').addEventListener('click', () => {
-  state.oni = null; store.del('oni'); $('#oniInput').value = ''; $('#oniSeason').value = '';
+  state.oni = null; store.del('oni');
+  $('#roniInput').value = ''; $('#roniSeason').value = '';
+  $('#oniInput').value = '';  $('#oniSeason').value = '';
   $('#oniDlg').close(); render();
 });
 
@@ -4373,8 +4453,19 @@ function snapshot() {
     units: state.unit === 'f' ? 'fahrenheit' : 'celsius',
     enso: {
       nino34_anomaly_c: num(h) ? +h.toFixed(2) : null,
+      /* Say which index this is. NOAA classifies on RONI since NWS PIS 26-05
+         (1 Feb 2026); an unpinned raw estimate reads high against the official
+         thresholds, and the model must not describe it as the official value. */
+      /* Digit-free wording on purpose: sourceNumbers() harvests every numeral in
+         this snapshot into the set of figures the model is allowed to quote, so
+         prose added here must not smuggle new numbers into that allowance. */
+      index_basis: headlineBasis().plain,
+      index_is_official: headlineBasis().official,
       phase: ph.name,
       strength: ph.strength || null,
+      strength_caveat: headlineBasis().official ? null
+        : 'This is the raw central-Pacific anomaly, not RONI. NOAA classifies ENSO on RONI, which '
+          + 'subtracts the tropical-belt mean and reads lower, so treat the strength as an upper bound.',
       warm_pool_east_edge_lon: num(edge) ? edge : null,
     },
     cities: MAIN().map(loc => {
@@ -4542,7 +4633,9 @@ function renderAiStatus() {
 
 const GLOSSARY = {
   oni: { term:'the Oceanic Niño Index',
-    text:'The O N I is the official measure of El Niño. NOAA takes sea-surface temperature in the Niño 3.4 box of the equatorial Pacific, subtracts the 30-year normal for that time of year, and averages it over three months. Three months of smoothing is the point: it filters out weather noise so only a genuine shift in the ocean shows. At or above plus zero point five is El Niño, at or below minus zero point five is La Niña, and anything between is neutral. This dashboard estimates it live from model sea-surface temperature, which is why it is labelled indicative — you can pin the official value from C P C and it will take precedence.' },
+    text:'The O N I takes sea-surface temperature in the Niño 3.4 box of the equatorial Pacific, subtracts the thirty-year normal for that time of year, and averages it over three months. Three months of smoothing is the point: it filters out weather noise so only a genuine shift in the ocean shows. At or above plus zero point five is El Niño, at or below minus zero point five is La Niña, and anything between is neutral. One important change: since the first of February twenty twenty six, NOAA no longer classifies E N S O on the O N I. It uses the relative index, R O N I. Ask me about R O N I and I will explain why that matters for the number on this page.' },
+  roni: { term:'the Relative Oceanic Niño Index',
+    text:'R O N I is what NOAA now uses to declare and grade El Niño and La Niña, as of the first of February twenty twenty six under public information statement twenty six dash oh five. It starts from the same Niño 3.4 anomaly as the O N I, then subtracts the average anomaly across the whole tropical belt, twenty north to twenty south, and rescales the result so its variability matches the old index. The reason is simple: the entire tropical ocean has been warming, so a fixed nineteen ninety one to twenty twenty baseline now makes every event look stronger than it is. R O N I removes that trend and measures how far the Pacific stands out from its own era. It reads lower than the raw anomaly — in the middle of twenty twenty six the gap was around four tenths of a degree on the three month means. This dashboard estimates the raw Niño 3.4 anomaly, not R O N I, so its number runs high against the official thresholds. Pin the official R O N I from C P C and everything here, including the risk model, follows it instead.' },
   nino34: { term:'the Niño 3.4 region',
     text:'Niño 3.4 is a box in the central equatorial Pacific, five degrees north to five degrees south, one hundred seventy west to one hundred twenty west. It is the standard box for tracking El Niño because sea temperature there has the strongest and most consistent relationship with global weather patterns. This dashboard samples six points across it.' },
   anomaly: { term:'an anomaly',
@@ -4584,6 +4677,8 @@ const GLOSSARY = {
 };
 
 const GLOSSARY_KEYS = [
+  /* RONI first: 'oni' is a substring of 'roni', so the broader key must not win. */
+  ['roni', ['roni','r o n i','relative oceanic','relative oni','relative index','pis 26-05','26-05']],
   ['oni', ['oni','o n i','oceanic nino','oceanic niño']],
   ['nino34', ['nino 3.4','niño 3.4','nino three','nino 34','niño 34']],
   ['teleconnection', ['teleconnection','teleconnect']],
@@ -4672,14 +4767,19 @@ function explainMetric(loc, k) {
 
   if (k === 'oni') {
     const h = headlineAnom();
-    if (!num(h)) return 'The ENSO phase is not calibrated right now, so I will not put a number on it. ' + GLOSSARY.oni.text;
+    if (!num(h)) return 'The ENSO phase is not calibrated right now, so I will not put a number on it. ' + GLOSSARY.roni.text;
     const ph = phaseOf(h);
     const fx = fxOf(loc);
     const push = ix.dryPush;
-    return `Niño 3.4 is running ${signed(h)} °C, which is ${ph.name}${ph.strength ? ', ' + ph.strength.toLowerCase() : ''}. `
-      + `For ${loc.name} that translates into ${signed(push, 1)} points on the drought side of the model, because `
+    const b = headlineBasis();
+    return `The index driving the model is ${signed(h)} °C — ${b.official
+        ? 'the pinned ' + (b.key === 'roni' ? 'official R O N I' : 'official O N I') + (b.season ? ' for ' + b.season : '')
+        : 'this page\'s raw Niño 3.4 estimate, which runs high because NOAA now classifies on R O N I'}. `
+      + `That is ${ph.name}${ph.strength ? ', ' + ph.strength.toLowerCase() : ''}${b.official ? '' : ' on the raw basis'}. `
+      + `For ${loc.name} it translates into ${signed(push, 1)} points on the drought side of the model, because `
       + `${loc.country || loc.name} has a ${fx.conf >= 0.9 ? 'strong' : fx.conf >= 0.5 ? 'moderate' : 'weak'} `
-      + `teleconnection to the Pacific. ${Math.abs(push) < 1.5 ? 'That is close to nothing, which is the honest answer here.' : ''}`;
+      + `teleconnection to the Pacific. ${Math.abs(push) < 1.5 ? 'That is close to nothing, which is the honest answer here.' : ''}`
+      + (b.official ? '' : ' Pin the official R O N I and this number, and everything it feeds, tightens up.');
   }
 
   if (['rain','temp','wind','humidity','uv'].includes(k)) return describeVar(loc, k);
@@ -4831,9 +4931,14 @@ function findLocation(t) {
 }
 
 function briefEnso() {
-  const h = headlineAnom(), ph = phaseOf(h);
-  if (!num(h)) return 'The ENSO phase is not calibrated right now — pin the official O N I to fix that.';
-  return `${ph.name}. ${ph.strength}. Niño 3.4 anomaly ${signed(h)} degrees.`;
+  const h = headlineAnom(), ph = phaseOf(h), b = headlineBasis();
+  if (!num(h)) return 'The ENSO phase is not calibrated right now — pin the official R O N I to fix that.';
+  if (b.official)
+    return `${ph.name}. ${ph.strength}. That is the pinned ${b.key === 'roni' ? 'R O N I' : 'O N I'}`
+      + `${b.season ? ' for ' + b.season : ''}, at ${signed(h)} degrees.`;
+  return `${ph.name}. The raw Niño 3.4 anomaly is ${signed(h)} degrees, which is ${ph.strength.toLowerCase()} `
+    + `on the raw index. One caveat: NOAA classifies on R O N I now, which subtracts the tropical mean and `
+    + `reads lower, so treat that strength as an upper bound until you pin the official value.`;
 }
 
 function briefLoc(loc) {

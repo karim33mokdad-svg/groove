@@ -15,8 +15,21 @@ search.
 **What it shows**
 
 - Current ENSO phase from a live Niño 3.4 sea-surface temperature estimate,
-  with a 60-day anomaly trend. The official NOAA CPC ONI can be pinned
-  manually and takes precedence over the estimate when set.
+  with a 60-day anomaly trend. The official NOAA CPC values can be pinned
+  manually and take precedence over the estimate when set.
+
+  **Which index.** Since 1 February 2026 (NWS Public Information Statement
+  26-05) NOAA monitors and classifies ENSO on the **Relative Oceanic Niño
+  Index (RONI)** — Niño 3.4 minus the 20°N–20°S tropical mean anomaly,
+  rescaled to the ONI's variance — and the ONI table itself moved to ERSST
+  v6. The dashboard's own live figure is a *raw* Niño 3.4 anomaly against a
+  fixed 1991–2020 base, so it carries the tropical warming trend that RONI
+  removes and reads **higher** than the official classification (the gap was
+  around 0.4 °C on the 3-month means in mid-2026). The card says so rather
+  than presenting the raw number as an official grade: until a value is
+  pinned, the strength label reads "… on the raw index — RONI reads lower".
+  Pin the RONI and the phase, the strength and the ENSO term in the risk
+  model all follow it instead.
 - Live conditions and a 7-day forecast per location.
 - How far each location is from its own 2010–2024 normal, for both
   temperature and rainfall — this is what makes "abnormal" quantitative
