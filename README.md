@@ -14,22 +14,33 @@ search.
 
 **What it shows**
 
-- Current ENSO phase from a live Niño 3.4 sea-surface temperature estimate,
-  with a 60-day anomaly trend. The official NOAA CPC values can be pinned
-  manually and take precedence over the estimate when set.
+- Current ENSO phase from **NOAA's official index, read live from CPC** on
+  every refresh, with the dashboard's own Niño 3.4 sea-surface estimate and a
+  60-day anomaly trend alongside it.
 
   **Which index.** Since 1 February 2026 (NWS Public Information Statement
   26-05) NOAA monitors and classifies ENSO on the **Relative Oceanic Niño
   Index (RONI)** — Niño 3.4 minus the 20°N–20°S tropical mean anomaly,
   rescaled to the ONI's variance — and the ONI table itself moved to ERSST
-  v6. The dashboard's own live figure is a *raw* Niño 3.4 anomaly against a
-  fixed 1991–2020 base, so it carries the tropical warming trend that RONI
-  removes and reads **higher** than the official classification (the gap was
-  around 0.4 °C on the 3-month means in mid-2026). The card says so rather
-  than presenting the raw number as an official grade: until a value is
-  pinned, the strength label reads "… on the raw index — RONI reads lower".
-  Pin the RONI and the phase, the strength and the ENSO term in the risk
-  model all follow it instead.
+  v6. Subtracting the tropical mean removes the global warming trend that a
+  fixed 1991–2020 baseline otherwise bakes into every event, so RONI reads
+  **lower** than a raw anomaly and is the honest yardstick for the
+  ±0.5 / 1.0 / 1.5 / 2.0 °C thresholds.
+
+  The page fetches `RONI.ascii.txt` and `oni.ascii.txt` from
+  `cpc.ncep.noaa.gov/data/indices/` — the series behind the published tables,
+  back to 1950 — and the latest 3-month season drives the phase, the strength
+  and the ENSO term in the risk model. RONI leads; ONI comes along because it
+  is the long homogeneous record, which is what lets the card say where this
+  event actually ranks and what it last compared with.
+
+  The page's own estimate is now the **fallback**, for between CPC's monthly
+  updates and for when CPC is unreachable. It is a *raw* Niño 3.4 anomaly, so
+  it carries exactly the trend RONI removes and runs high — and when it is
+  what's on screen, the card says so and the strength label reads "… on the
+  raw index — RONI reads lower" instead of claiming an official grade.
+  Pinning a value by hand is still there as a last resort; a live read always
+  supersedes it, and the card says when that is happening.
 - Live conditions and a 7-day forecast per location.
 - How far each location is from its own 2010–2024 normal, for both
   temperature and rainfall — this is what makes "abnormal" quantitative
@@ -71,11 +82,13 @@ search.
   filtered to on-topic stories, and listed as published: not verified here,
   and a headline is not a forecast.
 
-  Feeds that send no CORS headers cannot be read by a browser directly, so
+  Sources that send no CORS headers cannot be read by a browser directly, so
   those requests fall back to a public read-only relay. That means they pass
-  through a third party — news feeds only, nothing else on the page — and the
-  panel says so. The transport that worked last time is remembered so the
-  blocked path is not retried indefinitely.
+  through a third party — news feeds and NOAA's published ENSO index files,
+  nothing else on the page, and both are public documents fetched by URL with
+  nothing of the user's attached — and the panel says so. The transport that
+  worked last time is remembered so the blocked path is not retried
+  indefinitely.
 
   ReliefWeb's JSON API rejects unapproved appnames with HTTP 403, so the
   default is their public RSS, which needs no approval. Paste an approved
@@ -167,8 +180,11 @@ can be muted. Every reply is generated from the live computed data — the
 briefings read out real anomalies, indices and criteria states.
 
 Data comes from the [Open-Meteo](https://open-meteo.com/) forecast, marine
-and ERA5 archive APIs. The watch list and the cached climate normals are
-stored in the browser only.
+and ERA5 archive APIs, and from NOAA CPC's published
+[RONI](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/roni/)
+and [ONI](https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso/oni/v6/)
+index files. The watch list and the cached climate normals are stored in the
+browser only.
 
 
 ## Optional: connecting Claude
