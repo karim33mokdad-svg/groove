@@ -181,10 +181,28 @@ questions. There is a daily call cap (default 40) and a running spend estimate
 in the settings dialog. Set a spend limit in the Anthropic Console as the real
 backstop.
 
+**Which model answers is a deployment decision, not a code change.** The page
+always calls the proxy; the proxy picks the provider:
+
+- `PROVIDER = "workers-ai"` (default) — Cloudflare Workers AI. The model runs
+  inside the Worker on Cloudflare's own allocation, so there is no second API
+  key and no cross-origin problem at all. Free within their limits.
+- `PROVIDER = "anthropic"` — the Anthropic API, needing `ANTHROPIC_API_KEY`.
+
+Append `&provider=anthropic` to the proxy URL to override per request, which
+makes it easy to compare the two on the same briefing.
+
+**No invented figures — checked, not trusted.** Every number in the model's
+reply is matched back against the JSON snapshot it was given. Anything that
+cannot be traced is flagged on screen rather than shown quietly. This holds
+whichever provider answers, which is what makes a smaller open model safe to
+use here: it is verified, not merely instructed. The figures elsewhere on the
+page are computed and unaffected either way.
+
 **Key safety.** A key pasted into the dashboard is stored only in that
 browser, never committed and never sent anywhere but Anthropic — but this page
 is served from a public URL, so anyone using that device could read it out.
-The safer route is `el-nino-watch/worker.js`, a ready-made Cloudflare Worker
-that holds the key server-side; deploy it and paste its URL into the proxy
-field instead. The worker restricts callers by origin, requires a shared
-secret, and allows only the two models this dashboard uses.
+The safer route is `el-nino-watch/worker.js` with `wrangler.toml`; deploy it
+and paste its URL into the proxy field instead. On the Workers AI default
+there is no key to leak at all. The Worker restricts callers by origin,
+requires a shared secret, and caps token counts.
