@@ -98,12 +98,26 @@ search.
   and a headline is not a forecast.
 
   Sources that send no CORS headers cannot be read by a browser directly, so
-  those requests fall back to a public read-only relay. That means they pass
-  through a third party — news feeds and NOAA's published ENSO index files,
-  nothing else on the page, and both are public documents fetched by URL with
-  nothing of the user's attached — and the panel says so. The transport that
-  worked last time is remembered so the blocked path is not retried
-  indefinitely.
+  those requests go through a relay. That means they pass through whoever runs
+  it — news feeds and NOAA's published ENSO index files, nothing else on the
+  page, and both are public documents fetched by URL with nothing of the
+  user's attached — and the panel says so.
+
+  **Run your own relay.** Public CORS proxies are volunteer infrastructure:
+  they go down, they rate-limit, and they start requiring API keys without
+  notice (corsproxy.io did exactly that, which turned every blocked source
+  into an identical HTTP 401). `el-nino-watch/worker.js` serves `GET /fetch`
+  as a read-only relay restricted to an explicit allowlist of public data
+  hosts — GET only, no request headers or body forwarded, size-capped, so a
+  leaked URL is not an open proxy. Paste its URL into *your own relay URL* on
+  the news tab and it is tried first.
+
+  Failing that, three public relays are tried in turn. One that answers
+  401/402/403 is demanding credentials rather than having blinked, so it is
+  parked for 24 hours instead of being retried once per source per refresh.
+  The relay that last worked is tried first, and the error list groups by
+  message, so one broken relay reads as one diagnosis rather than seven
+  identical failures.
 
   ReliefWeb's JSON API rejects unapproved appnames with HTTP 403, so the
   default is their public RSS, which needs no approval. Paste an approved
@@ -224,6 +238,10 @@ balance covers well over a year of daily briefings plus a couple of thousand
 questions. There is a daily call cap (default 40) and a running spend estimate
 in the settings dialog. Set a spend limit in the Anthropic Console as the real
 backstop.
+
+The same Worker also serves `GET /fetch`, the data relay described under
+**News & alerts** — so one deployment covers both the model calls and the
+CORS-blocked data sources, and neither depends on a free public proxy.
 
 **Which model answers is a deployment decision, not a code change.** The page
 always calls the proxy; the proxy picks the provider:

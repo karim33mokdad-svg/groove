@@ -955,14 +955,23 @@
       </div>
       <div id="newsList"></div>
       <div style="padding:0 16px 16px">
-        <label class="fld" style="margin-top:4px"><span>ReliefWeb app name (once they approve yours)</span>
+        <label class="fld" style="margin-top:4px"><span>Your own relay URL (recommended)</span>
+          <input id="relayUrl" type="text" placeholder="https://elnino-proxy.you.workers.dev/fetch?s=secret"
+            autocomplete="off" spellcheck="false"></label>
+        <p class="xs dim" style="line-height:1.55;margin-top:8px">
+          The public relays below are volunteer infrastructure: they go down, they rate-limit, and they
+          start requiring API keys without notice. Deploying <code>el-nino-watch/worker.js</code> gives you
+          a relay nobody else shares and that cannot start charging — paste its <code>/fetch</code> URL
+          here and it is tried first. The Worker only fetches an allowlist of public data hosts.
+        </p>
+        <label class="fld" style="margin-top:14px"><span>ReliefWeb app name (once they approve yours)</span>
           <input id="rwApp" type="text" placeholder="not set — using their public RSS instead"
             autocomplete="off"></label>
         <p class="xs dim" style="line-height:1.55;margin-top:12px">
-          Sources that block cross-origin reads are fetched through a public read-only relay, so those
-          requests pass through a third party. That applies to news feeds and to NOAA's published ENSO
-          index files, and to nothing else on this page — both are public documents fetched by URL, with
-          nothing of yours attached. Headlines come from publisher RSS,
+          Sources that block cross-origin reads are fetched through a relay, so those requests pass through
+          whoever runs it — your Worker if you set one above, otherwise a public one. That applies to news
+          feeds and to NOAA's published ENSO index files, and to nothing else on this page — both are public
+          documents fetched by URL, with nothing of yours attached. Headlines come from publisher RSS,
           <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">GDELT</a>,
           which indexes global news, and from <a href="https://reliefweb.int/" target="_blank" rel="noopener">ReliefWeb</a>.
           They are listed as published — I do not verify them, and a headline is not a forecast.
@@ -1433,36 +1442,86 @@ const store = {
    files — both of which are public documents fetched by URL with nothing of
    yours attached. The transport that worked last time is remembered, so the
    failing path is not retried forever. */
+/* Public relays are volunteer infrastructure: they go down, they rate-limit,
+   and they start demanding API keys with no notice (corsproxy.io did exactly
+   that, which turned every blocked source into an identical 401). So there is
+   more than one, a relay that starts asking for a key is parked rather than
+   retried on every source, and the reliable option is your own Worker. */
+const RELAY_SELF = { id: 'worker', label: 'your Worker' };
 const RELAYS = [
-  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
-  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+  { id: 'allorigins', label: 'allorigins.win',
+    make: u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) },
+  { id: 'codetabs',   label: 'codetabs.com',
+    make: u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u) },
+  { id: 'corsproxy',  label: 'corsproxy.io',
+    make: u => 'https://corsproxy.io/?url=' + encodeURIComponent(u) },
 ];
 
+/* Your own Worker, if you have deployed one. It needs no key, is not shared
+   with anyone else, and cannot start charging — so it is tried before the
+   public relays whenever it is configured. */
+function selfRelay() {
+  const base = (store.get('relayUrl') || '').trim();
+  if (!/^https:\/\//i.test(base)) return null;
+  return { ...RELAY_SELF,
+    make: u => base + (base.includes('?') ? '&' : '?') + 'url=' + encodeURIComponent(u) };
+}
+
+/* 401/403 from a relay means it wants credentials, not that it blinked. Park it
+   for a day: retrying it once per source per refresh just fills the error list
+   with the same message. */
+const relayParked = id => !!store.get('relayDead:' + id, 24 * 3600e3);
+function parkRelay(id, why) {
+  store.set('relayDead:' + id, { why: String(why).slice(0, 120), at: Date.now() });
+}
+
+function relayOrder() {
+  const self = selfRelay();
+  const pool = RELAYS.filter(r => !relayParked(r.id));
+  const good = store.get('relayGood');
+  pool.sort((a, b) => (b.id === good) - (a.id === good));      // last winner first
+  return self ? [self, ...pool] : pool;
+}
+
 async function fetchVia(url, as = 'json', timeout = 14000) {
-  const direct = u => u;
+  const direct = { id: 'direct', label: 'direct', make: u => u };
   const pref = store.get('transport');
-  const order = pref === 'relay' ? [...RELAYS, direct] : [direct, ...RELAYS];
-  let last = 'unreachable';
-  for (const make of order) {
+  const relays = relayOrder();
+  const order = pref === 'relay' ? [...relays, direct] : [direct, ...relays];
+
+  const tried = [];
+  for (const via of order) {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeout);
     try {
-      const res = await fetch(make(url), { signal: ctrl.signal });
+      const res = await fetch(via.make(url), { signal: ctrl.signal });
       clearTimeout(t);
       const body = await res.text();
       if (!res.ok) {
         let msg = body.slice(0, 160);
         try { const j = JSON.parse(body); msg = (j.error && (j.error.message || j.error.description)) || msg; } catch {}
-        throw new Error('HTTP ' + res.status + ' — ' + msg);
+        /* A relay demanding a key is a property of the relay, not of this URL. */
+        if (via.id !== 'direct' && (res.status === 401 || res.status === 402 || res.status === 403))
+          parkRelay(via.id, msg);
+        throw new Error('HTTP ' + res.status + (msg ? ' — ' + msg : ''));
       }
-      store.set('transport', make === direct ? 'direct' : 'relay');
+      store.set('transport', via.id === 'direct' ? 'direct' : 'relay');
+      if (via.id !== 'direct' && via.id !== RELAY_SELF.id) store.set('relayGood', via.id);
       return as === 'json' ? JSON.parse(body) : body;
     } catch (e) {
       clearTimeout(t);
-      last = (e && e.message) || 'blocked';
+      tried.push(via.label + ': ' + ((e && e.message) || 'blocked'));
     }
   }
-  throw new Error(last);
+  /* Name what was actually tried. "unreachable" told you nothing about whether
+     the source was down or every route to it was. */
+  throw new Error(tried.length ? tried[tried.length - 1] : 'no transport available');
+}
+
+/* Which relays are currently parked, for the news tab to explain itself. */
+function parkedRelays() {
+  return RELAYS.filter(r => relayParked(r.id))
+    .map(r => ({ ...r, ...(store.get('relayDead:' + r.id, 24 * 3600e3) || {}) }));
 }
 
 /* RSS and Atom both, without assuming which one a publisher uses. */
@@ -3229,11 +3288,38 @@ function renderNews() {
   const f = state.newsFilter || 'all';
   const list = all.filter(i => f === 'all' || i.tag === f);
 
+  /* One broken relay makes every blocked source fail with the same message, so
+     group by message and list the sources against it. Seven copies of a 401 is
+     noise; "7 sources — corsproxy.io wants an API key" is a diagnosis. */
+  const byMsg = new Map();
+  for (const line of n.errors) {
+    const i = line.indexOf(':');
+    const src = i > 0 ? line.slice(0, i).trim() : line;
+    const msg = i > 0 ? line.slice(i + 1).trim() : '';
+    if (!byMsg.has(msg)) byMsg.set(msg, []);
+    byMsg.get(msg).push(src);
+  }
+  const groups = [...byMsg.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([msg, srcs]) => `<div style="margin-top:6px"><b>${esc(srcs.join(', '))}</b><br>${esc(msg)}</div>`);
+
+  const parked = parkedRelays();
+  const advice = !list.length || parked.length
+    ? `<div style="margin-top:10px">`
+      + (parked.length
+          ? `Parked for today: ${esc(parked.map(p => p.label).join(', ')) } — `
+            + `${parked.length === 1 ? 'it' : 'they'} started requiring an API key. `
+          : '')
+      + `Public relays are volunteer infrastructure and come and go. For a route that cannot break `
+      + `this way, deploy <code>el-nino-watch/worker.js</code> and paste its <code>/fetch</code> URL `
+      + `into the relay field above.</div>`
+    : '';
+
   const errRow = n.errors.length
     ? `<details class="nrow" style="display:block"><summary class="more">
          ${list.length ? `${n.errors.length} source${n.errors.length === 1 ? '' : 's'} unavailable`
                        : 'No source responded — details'}</summary>
-       <div class="meta" style="margin-top:8px">${esc(n.errors.join(' · '))}</div></details>` : '';
+       <div class="meta" style="margin-top:8px">${groups.join('')}${advice}</div></details>` : '';
 
   el.innerHTML = errRow + (list.length ? list.slice(0, 50).map(i => `<div class="nrow">
       <span class="ndot"></span>
@@ -4219,6 +4305,21 @@ document.addEventListener('click', async e => {
 });
 
 document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'relayUrl') {
+    const v = e.target.value.trim();
+    if (v && !/^https:\/\//i.test(v)) {
+      respond('That relay URL needs to start with https. Nothing saved.');
+      return;
+    }
+    store.set('relayUrl', v);
+    /* A new relay deserves a clean slate: the parked list and the remembered
+       winner both describe the old routing, not this one. */
+    for (const r of RELAYS) store.del('relayDead:' + r.id);
+    store.del('relayGood'); store.del('transport');
+    respond(v ? 'Relay saved. I will try your Worker first from now on, and fall back to the public relays.'
+              : 'Relay cleared — back to the public relays only.');
+    refreshAll({ quiet: true });
+  }
   if (e.target && e.target.id === 'rwApp') {
     state.rwAppname = e.target.value.trim();
     store.set('rwAppname', state.rwAppname);
@@ -5758,6 +5859,7 @@ function boot() {
   buildSimVars();
   renderRules();
   if ($('#rwApp')) $('#rwApp').value = state.rwAppname;
+  if ($('#relayUrl')) $('#relayUrl').value = store.get('relayUrl') || '';
   initVoice();
   setView(state.view);
   for (const loc of [...MAIN(), ...state.watch]) {

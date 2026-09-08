@@ -17,8 +17,16 @@
  *   wrangler secret put SHARED_SECRET                (any random string)
  *   wrangler secret put ANTHROPIC_API_KEY            (required on the default)
  *
- * Then paste into the dashboard under Claude → proxy URL:
- *   https://elnino-proxy.<you>.workers.dev/?s=<your-shared-secret>
+ * It serves two things:
+ *
+ *   POST /        the model proxy (Claude briefings and open questions)
+ *   GET  /fetch   a read-only relay for public data that sends no CORS headers
+ *                 — NOAA's index files and the news feeds. Restricted to an
+ *                 explicit host allowlist so it is not an open proxy.
+ *
+ * Then paste into the dashboard:
+ *   Claude → proxy URL      https://elnino-proxy.<you>.workers.dev/?s=<secret>
+ *   News → your relay URL   https://elnino-proxy.<you>.workers.dev/fetch?s=<secret>
  *
  * The shared secret is not authentication — it stops a stranger who finds the
  * URL from spending your allocation. Set a spend limit at the provider too.
@@ -29,6 +37,66 @@ const ALLOWED_ORIGINS = [
   'http://localhost:8000',
   'http://127.0.0.1:8099',
 ];
+
+/* ── GET /fetch?url=… ──────────────────────────────────────────────────────
+   A read-only relay for public data that sends no CORS headers, so the
+   dashboard stops depending on free public proxies. Those are volunteer
+   infrastructure: they go down, they rate-limit, and corsproxy.io began
+   requiring an API key, which turned every blocked source into an identical
+   401. This one is yours, so it cannot do that.
+
+   It is deliberately narrow: GET only, no request headers or body forwarded,
+   an explicit host allowlist, and a response size cap. That keeps it useless
+   as an open proxy if the URL ever leaks — an open relay would let a stranger
+   launder traffic through your account.
+
+   To add a host, add its exact hostname here and redeploy. */
+const RELAY_HOSTS = new Set([
+  'www.cpc.ncep.noaa.gov',      // ONI, RONI and the weekly Niño SSTs
+  'reliefweb.int',
+  'api.reliefweb.int',
+  'api.gdeltproject.org',
+  'feeds.bbci.co.uk',
+  'www.theguardian.com',
+  'www.climate.gov',
+  'eonet.gsfc.nasa.gov',
+]);
+
+const RELAY_MAX_BYTES = 4 * 1024 * 1024;
+
+async function relayFetch(request, env, headers) {
+  const target = new URL(request.url).searchParams.get('url');
+  if (!target) return json({ error: { message: 'Missing ?url=' } }, 400, headers);
+
+  let u;
+  try { u = new URL(target); }
+  catch { return json({ error: { message: 'Not a valid URL' } }, 400, headers); }
+
+  if (u.protocol !== 'https:')
+    return json({ error: { message: 'https only' } }, 400, headers);
+  if (!RELAY_HOSTS.has(u.hostname))
+    return json({ error: { message: `Host ${u.hostname} is not on this relay's allowlist.` } }, 403, headers);
+
+  const res = await fetch(u.toString(), {
+    method: 'GET',
+    headers: { 'user-agent': 'el-nino-watch (+https://github.com/karim33mokdad-svg/groove)' },
+    cf: { cacheTtl: 600, cacheEverything: true },
+  });
+  const body = await res.text();
+  if (body.length > RELAY_MAX_BYTES)
+    return json({ error: { message: 'Response too large' } }, 502, headers);
+
+  /* Pass the upstream status through so the page can tell "source is down"
+     from "relay is down" — collapsing both into 200 would hide real failures. */
+  return new Response(body, {
+    status: res.status,
+    headers: {
+      ...headers,
+      'content-type': res.headers.get('content-type') || 'text/plain; charset=utf-8',
+      'cache-control': 'public, max-age=300',
+    },
+  });
+}
 
 /* Only the models this dashboard uses, so a leaked URL cannot be pointed at
    something far more expensive. */
@@ -120,13 +188,21 @@ export default {
     const headers = { ...cors(origin), 'content-type': 'application/json' };
 
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors(origin) });
-    if (request.method !== 'POST') return json({ error: { message: 'POST only' } }, 405, headers);
 
     if (env.SHARED_SECRET) {
       const given = new URL(request.url).searchParams.get('s');
       if (given !== env.SHARED_SECRET)
         return json({ error: { message: 'Bad or missing shared secret.' } }, 401, headers);
     }
+
+    /* The data relay is a GET; the model proxy below is a POST. */
+    if (new URL(request.url).pathname.replace(/\/+$/, '') === '/fetch') {
+      if (request.method !== 'GET') return json({ error: { message: 'GET only' } }, 405, headers);
+      try { return await relayFetch(request, env, { ...cors(origin) }); }
+      catch (e) { return json({ error: { message: String(e && e.message || e) } }, 502, headers); }
+    }
+
+    if (request.method !== 'POST') return json({ error: { message: 'POST only' } }, 405, headers);
 
     let body;
     try { body = await request.json(); }
