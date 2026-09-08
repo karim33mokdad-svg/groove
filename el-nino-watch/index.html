@@ -957,7 +957,11 @@
       <div style="padding:0 16px 16px">
         <label class="fld" style="margin-top:4px"><span>Your own relay URL (recommended)</span>
           <input id="relayUrl" type="text" placeholder="https://elnino-proxy.you.workers.dev/fetch?s=secret"
-            autocomplete="off" spellcheck="false"></label>
+            autocomplete="off" spellcheck="false" autocapitalize="off"></label>
+        <div class="row" style="gap:8px;margin-top:8px;align-items:center">
+          <button class="btn" id="relayTest">Test relay</button>
+          <span class="xs dim grow" id="relayState"></span>
+        </div>
         <p class="xs dim" style="line-height:1.55;margin-top:8px">
           The public relays below are volunteer infrastructure: they go down, they rate-limit, and they
           start requiring API keys without notice. Deploying <code>el-nino-watch/worker.js</code> gives you
@@ -1467,6 +1471,9 @@ function selfRelay() {
     make: u => base + (base.includes('?') ? '&' : '?') + 'url=' + encodeURIComponent(u) };
 }
 
+/* Last outcome of the configured relay, for the news tab to report. */
+const relayHealth = { self: null };
+
 /* 401/403 from a relay means it wants credentials, not that it blinked. Park it
    for a day: retrying it once per source per refresh just fills the error list
    with the same message. */
@@ -1500,17 +1507,26 @@ async function fetchVia(url, as = 'json', timeout = 14000) {
       if (!res.ok) {
         let msg = body.slice(0, 160);
         try { const j = JSON.parse(body); msg = (j.error && (j.error.message || j.error.description)) || msg; } catch {}
-        /* A relay demanding a key is a property of the relay, not of this URL. */
-        if (via.id !== 'direct' && (res.status === 401 || res.status === 402 || res.status === 403))
+        /* A relay demanding a key is a property of the relay, not of this URL.
+           Your own Worker is exempt: a 403 from it means one host is off its
+           allowlist, which says nothing about the next request. */
+        if (via.id !== 'direct' && via.id !== RELAY_SELF.id
+            && (res.status === 401 || res.status === 402 || res.status === 403))
           parkRelay(via.id, msg);
         throw new Error('HTTP ' + res.status + (msg ? ' — ' + msg : ''));
       }
+      if (via.id === RELAY_SELF.id) relayHealth.self = { ok: true, at: Date.now() };
       store.set('transport', via.id === 'direct' ? 'direct' : 'relay');
       if (via.id !== 'direct' && via.id !== RELAY_SELF.id) store.set('relayGood', via.id);
       return as === 'json' ? JSON.parse(body) : body;
     } catch (e) {
       clearTimeout(t);
-      tried.push(via.label + ': ' + ((e && e.message) || 'blocked'));
+      const why = (e && e.message) || 'blocked';
+      /* Remember the configured relay's own failure. It is the one thing here
+         the user can fix, and otherwise it is buried behind whichever public
+         relay happened to fail last. */
+      if (via.id === RELAY_SELF.id) relayHealth.self = { ok: false, at: Date.now(), why, url };
+      tried.push(via.label + ': ' + why);
     }
   }
   /* Name what was actually tried. "unreachable" told you nothing about whether
@@ -1522,6 +1538,34 @@ async function fetchVia(url, as = 'json', timeout = 14000) {
 function parkedRelays() {
   return RELAYS.filter(r => relayParked(r.id))
     .map(r => ({ ...r, ...(store.get('relayDead:' + r.id, 24 * 3600e3) || {}) }));
+}
+
+/* Fetch one known-good file through the configured relay only, and say exactly
+   what came back. Without this, a failing Worker is invisible: fetchVia falls
+   through to the public relays and reports their error, so the one component
+   the user actually controls is the one they get no feedback about. */
+async function testRelay() {
+  const self = selfRelay();
+  if (!self) return { ok: false, msg: 'No relay URL saved yet.' };
+  const probe = 'https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt';
+  try {
+    const res = await fetch(self.make(probe));
+    const body = await res.text();
+    if (!res.ok) {
+      let msg = body.slice(0, 200);
+      try { msg = JSON.parse(body)?.error?.message || msg; } catch {}
+      return { ok: false, msg: `HTTP ${res.status} — ${msg}` };
+    }
+    if (!/SEAS\s+YR/i.test(body))
+      return { ok: false, msg: 'Responded, but not with the CPC file. First bytes: ' + body.slice(0, 120) };
+    return { ok: true, msg: `Working — fetched ${body.length.toLocaleString()} bytes of the CPC ONI file.` };
+  } catch (e) {
+    /* The browser hides cross-origin failures behind a bare "Failed to fetch",
+       so name the likely cause rather than leaving a dead end. */
+    return { ok: false, msg: ((e && e.message) || 'blocked')
+      + ' — usually means the URL is wrong, or the Worker did not send CORS headers for this page '
+      + `(its ALLOWED_ORIGINS must contain ${location.origin}).` };
+  }
 }
 
 /* RSS and Atom both, without assuming which one a publisher uses. */
@@ -3304,15 +3348,29 @@ function renderNews() {
     .map(([msg, srcs]) => `<div style="margin-top:6px"><b>${esc(srcs.join(', '))}</b><br>${esc(msg)}</div>`);
 
   const parked = parkedRelays();
-  const advice = !list.length || parked.length
+  const self = selfRelay();
+  const h = relayHealth.self;
+
+  /* Say what the relay you configured actually did. Telling someone to deploy a
+     Worker they have already deployed is worse than saying nothing. */
+  const selfLine = !self
+    ? `Public relays are volunteer infrastructure and come and go. For a route that cannot break `
+      + `this way, deploy <code>el-nino-watch/worker.js</code> and paste its <code>/fetch</code> URL `
+      + `into the relay field above.`
+    : h && h.ok
+      ? `Your relay answered on the last request, so anything still failing here is the source itself.`
+      : h
+        ? `<b>Your relay was tried and failed:</b> ${esc(h.why)} — so these fell through to the public `
+          + `relays. Tap <b>Test relay</b> above for the exact response.`
+        : `Your relay is saved but has not been used yet — tap <b>Test relay</b> above to check it.`;
+
+  const advice = (!list.length || parked.length || (h && !h.ok))
     ? `<div style="margin-top:10px">`
       + (parked.length
           ? `Parked for today: ${esc(parked.map(p => p.label).join(', ')) } — `
             + `${parked.length === 1 ? 'it' : 'they'} started requiring an API key. `
           : '')
-      + `Public relays are volunteer infrastructure and come and go. For a route that cannot break `
-      + `this way, deploy <code>el-nino-watch/worker.js</code> and paste its <code>/fetch</code> URL `
-      + `into the relay field above.</div>`
+      + selfLine + `</div>`
     : '';
 
   const errRow = n.errors.length
@@ -4304,22 +4362,53 @@ document.addEventListener('click', async e => {
   }
 });
 
-document.addEventListener('change', e => {
-  if (e.target && e.target.id === 'relayUrl') {
-    const v = e.target.value.trim();
-    if (v && !/^https:\/\//i.test(v)) {
-      respond('That relay URL needs to start with https. Nothing saved.');
-      return;
-    }
-    store.set('relayUrl', v);
-    /* A new relay deserves a clean slate: the parked list and the remembered
-       winner both describe the old routing, not this one. */
-    for (const r of RELAYS) store.del('relayDead:' + r.id);
-    store.del('relayGood'); store.del('transport');
-    respond(v ? 'Relay saved. I will try your Worker first from now on, and fall back to the public relays.'
-              : 'Relay cleared — back to the public relays only.');
-    refreshAll({ quiet: true });
+/* `change` alone is unreliable on mobile — pasting and then tapping away does
+   not always fire it, which silently loses the value. Save on blur too, and
+   only act when it actually differs from what is stored. */
+function saveRelayUrl(raw) {
+  const v = String(raw || '').trim().replace(/[‘’“”]/g, '');
+  if (v === (store.get('relayUrl') || '')) return true;      // already stored, nothing to say
+  const reject = why => { $('#relayState').textContent = why; $('#relayState').style.color = 'var(--warm)'; return false; };
+  if (v && !/^https:\/\//i.test(v))
+    return reject('Not saved — the URL must start with https://');
+  if (v && /[?&]url=/i.test(v))
+    return reject('Not saved — drop the &url=… part; the page adds that itself.');
+  store.set('relayUrl', v);
+  relayHealth.self = null;
+  /* A new relay deserves a clean slate: the parked list and the remembered
+     winner both describe the old routing, not this one. */
+  for (const r of RELAYS) store.del('relayDead:' + r.id);
+  store.del('relayGood'); store.del('transport');
+  $('#relayState').textContent = v ? 'Saved. Testing…' : 'Cleared — public relays only.';
+  $('#relayState').style.color = '';
+  if (v) runRelayTest(); else render();
+  refreshAll({ quiet: true });
+  return true;
+}
+
+async function runRelayTest() {
+  const el = $('#relayState');
+  el.textContent = 'Testing…';
+  const r = await testRelay();
+  el.textContent = (r.ok ? '✓ ' : '✕ ') + r.msg;
+  el.style.color = r.ok ? 'var(--accent)' : 'var(--warm)';
+  relayHealth.self = { ok: r.ok, at: Date.now(), why: r.msg };
+}
+
+document.addEventListener('click', e => {
+  if (e.target && e.target.id === 'relayTest') {
+    /* Catch an unsaved paste first — but if the value was rejected, leave the
+       reason on screen instead of overwriting it with a generic test result. */
+    if (saveRelayUrl($('#relayUrl').value)) runRelayTest();
   }
+});
+
+document.addEventListener('blur', e => {
+  if (e.target && e.target.id === 'relayUrl') saveRelayUrl(e.target.value);
+}, true);
+
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'relayUrl') saveRelayUrl(e.target.value);
   if (e.target && e.target.id === 'rwApp') {
     state.rwAppname = e.target.value.trim();
     store.set('rwAppname', state.rwAppname);
