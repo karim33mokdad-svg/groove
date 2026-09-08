@@ -788,7 +788,7 @@
         <div class="kv"><span id="anomTrendLabel">Recent trend</span><b id="anomTrend">–</b></div>
         <div class="kv"><span>Official CPC RONI</span><b id="roniOfficial">–</b></div>
         <div class="kv"><span>Official CPC ONI</span><b id="oniOfficial">–</b></div>
-        <div class="kv" id="rankRow" hidden><span>Rank since 1950</span><b id="oniRank">–</b></div>
+        <div class="kv" id="rankRow" hidden><span id="rankLabel">Rank in the record</span><b id="oniRank">–</b></div>
         <div class="kv" id="estRow" hidden><span id="anom90Label">This page's estimate</span><b id="anom90">–</b></div>
       </div>
       <div class="xs dim" style="line-height:1.45">
@@ -2011,7 +2011,11 @@ function ensoRank() {
   if (!s || !num(s.value)) return null;
 
   const phase = s.value > 0 ? 'El Niño' : 'La Niña';
-  if (!s.rank) return { text: 'neutral season — below the ±0.5 °C threshold', compare: '' };
+  /* Say which year the record actually starts, rather than assuming 1950 — the
+     two index files need not share a start, and CPC can change either. */
+  const startYear = (s.first || '').replace(/^\w+\s*/, '') || 'the record';
+  const label = 'Rank since ' + startYear;
+  if (!s.rank) return { label, text: 'neutral season — below the ±0.5 °C threshold', compare: '' };
 
   const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th'
     : ['th','st','nd','rd'][n % 10] || 'th');
@@ -2029,7 +2033,7 @@ function ensoRank() {
         + `at ${signed(s.peak.value, 2)} °C.`
       : `${b.short} last ran this high in ${s.since.season}, at ${signed(s.since.value, 2)} °C, and the `
         + `record is ${signed(s.peak.value, 2)} °C in ${s.peak.season}.`;
-  return { text, compare };
+  return { label, text, compare };
 }
 
 async function loadOfficialIndices() {
@@ -2491,7 +2495,10 @@ function renderEnso() {
      answer, and the full ONI series can. */
   const rk = ensoRank();
   $('#rankRow').hidden = !rk;
-  if (rk) $('#oniRank').textContent = rk.text;
+  if (rk) {
+    $('#oniRank').textContent = rk.text;
+    $('#rankLabel').textContent = rk.label;
+  }
 
   /* The seasonal index lags by design — three months of smoothing costs you
      about six weeks of currency. Saying so, and pointing at the weekly row, is
