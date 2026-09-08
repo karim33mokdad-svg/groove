@@ -1529,9 +1529,14 @@ async function fetchVia(url, as = 'json', timeout = 14000) {
       tried.push(via.label + ': ' + why);
     }
   }
-  /* Name what was actually tried. "unreachable" told you nothing about whether
-     the source was down or every route to it was. */
-  throw new Error(tried.length ? tried[tried.length - 1] : 'no transport available');
+  /* Name what was actually tried, and lead with your own relay whenever it was
+     one of them. It is the only link in the chain you can fix, and burying it
+     behind whichever public relay happened to fail last is exactly what made
+     this undiagnosable. */
+  if (!tried.length) throw new Error('no transport available');
+  const selfErr = tried.find(t => t.startsWith(RELAY_SELF.label + ':'));
+  const lastErr = tried[tried.length - 1];
+  throw new Error(selfErr && selfErr !== lastErr ? selfErr + ' · then ' + lastErr : lastErr);
 }
 
 /* Which relays are currently parked, for the news tab to explain itself. */
@@ -3286,11 +3291,15 @@ async function loadNews(force) {
   }));
 
   /* GDELT last: its targeted queries are the best source when it is
-        reachable, but it sends no CORS headers so it needs the relay. */
+        reachable, but it sends no CORS headers so it needs the relay.
+        It is also genuinely slow — a doc query regularly takes well over ten
+        seconds, and a relay hop adds to that — so the default timeout was
+        aborting perfectly healthy requests. */
   await Promise.all(newsQueries().map(async ({ tag, q }) => {
     try {
       const r = await fetchVia('https://api.gdeltproject.org/api/v2/doc/doc'
-        + `?query=${encodeURIComponent(q)}&mode=artlist&maxrecords=20&sort=datedesc&format=json`, 'json');
+        + `?query=${encodeURIComponent(q)}&mode=artlist&maxrecords=20&sort=datedesc&format=json`,
+        'json', 30000);
       for (const a of (r.articles || [])) {
         if (!a.url || !a.title) continue;
         items.push({ tag, title: a.title, url: a.url, src: a.domain || 'news', when: gdeltDate(a.seendate) });

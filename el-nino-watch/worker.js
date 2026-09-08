@@ -77,10 +77,23 @@ async function relayFetch(request, env, headers) {
   if (!RELAY_HOSTS.has(u.hostname))
     return json({ error: { message: `Host ${u.hostname} is not on this relay's allowlist.` } }, 403, headers);
 
+  /* Identify honestly, but in the shape servers expect. A bare product token
+     gets rejected outright by some government and publisher sites, which is
+     indistinguishable from the feed being down; the Mozilla prefix is the
+     convention that keeps those filters happy. Sending Accept matters too —
+     some feed hosts answer 406 without it. */
   const res = await fetch(u.toString(), {
     method: 'GET',
-    headers: { 'user-agent': 'el-nino-watch (+https://github.com/karim33mokdad-svg/groove)' },
-    cf: { cacheTtl: 600, cacheEverything: true },
+    headers: {
+      'user-agent': 'Mozilla/5.0 (compatible; el-nino-watch/1.0; +https://github.com/karim33mokdad-svg/groove)',
+      'accept': 'application/rss+xml, application/atom+xml, application/xml, application/json, text/*;q=0.9, */*;q=0.8',
+      'accept-language': 'en',
+    },
+    redirect: 'follow',
+    /* Cache successes only. Caching a 403 for ten minutes turns a transient
+       upstream refusal into something that looks permanent while you debug it. */
+    cf: { cacheEverything: true,
+          cacheTtlByStatus: { '200-299': 600, '300-399': 0, '400-499': 0, '500-599': 0 } },
   });
   const body = await res.text();
   if (body.length > RELAY_MAX_BYTES)
