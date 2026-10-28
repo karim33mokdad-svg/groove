@@ -239,7 +239,46 @@ sw.js                   offline cache
 test/sim.js             headless engine harness
 test/mc.js              outcome-simulator harness
 build/inline.js         single-file build
+tools/forecast.js       ten-year ensemble forecaster
+reports/                published forecast reports
 ```
+
+---
+
+## Ensemble forecasting
+
+`tools/forecast.js` runs the whole board forward many times with every capital
+acting under its own leadership, and reports the distribution of worlds that
+come out. Nobody holds a seat in these runs — there is no player, so nothing in
+the output is advice about what anyone should do.
+
+```bash
+node tools/forecast.js 400 40 20261028   # runs, quarters, seed
+```
+
+It writes `dist/forecast.json` and prints a summary: system polarity and who
+leads it, power share by actor with its components, per-theatre escalation and
+settlement probabilities, leadership turnover split into scheduled and
+irregular, economic and sociological distributions, recurring bloc
+configurations, and conditional branches (what differs in runs where Taiwan
+reaches war, where Ukraine settles, where the Iranian programme reconstitutes).
+
+A published report from this generator is in `reports/`.
+
+### Calibration history, and why it matters
+
+The first ensemble was not defensible and the corrections are worth recording,
+because they are the reason to trust the second one:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Iran changing leadership 7.7×/decade | Coup hazards multiplied rather than summed | Strain summed, hazard capped near historical base rates, cooldown after a transition |
+| 25% chance of nuclear use | Hazard curve set against a round number, not the realised risk distribution | Continuous tail calibrated to ~2%/decade — non-zero, because eighty years of non-use is not a guarantee |
+| …then 0% | Threshold sat above the realised distribution, making a cliff | Lowered until the tail was continuous |
+| US changing government 4.4×/decade | A legislative midterm treated as a change of executive | Legislative and executive contests separated; a midterm now moves veto points, not doctrine |
+| EU scoring as a near-peer superpower | No discount for the ability to act as one | Power index discounts for veto points; the EU converts mass to action at ~0.61 |
+| Every won theatre marching to total victory | Attrition had constant returns to advantage | Diminishing returns on dominance — the last stretch is the hardest |
+| Approval and trust pinned at their bounds | Accumulating rather than target-seeking | Both now seek a level set by conditions |
 
 ---
 

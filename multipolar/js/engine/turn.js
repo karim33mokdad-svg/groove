@@ -77,6 +77,7 @@
          rather than multiplied, and the result is capped, so that a very bad
          decade produces a realistic cumulative risk instead of a certainty. */
       const strain =
+        clamp((35 - p.approval) / 35, 0, 1) * 0.40 +
         clamp((p.discontent - 50) / 50, 0, 1) * 0.55 +
         clamp((92 - p.econ) / 30, 0, 1) * 0.45 +
         clamp((p.warStress - 65) / 35, 0, 1) * 0.35 +
@@ -222,7 +223,7 @@
 
       /* mass mobilisation: a threshold phenomenon, not a gradual one */
       const openness = 1 - (L ? L.vetoPoints : 0.5) * 0.3;
-      if (p.discontent > 72 && MP.rnd() < (p.discontent - 72) / 100 * openness) {
+      if (p.discontent > 50 && MP.rnd() < (p.discontent - 50) / 140 * openness) {
         p.approval = clamp(p.approval - 5, 0, 100);
         p.cohesion = clamp(p.cohesion - 4, 0, 100);
         p.discontent = clamp(p.discontent - 7, 0, 100);
@@ -248,7 +249,15 @@
       const edge = (wA - wB) / Math.max(1, wA + wB);
       /* defence is strongly favoured in attritional warfare: a large material
          edge produces a small territorial shift, not a breakthrough */
-      const shift = Math.sign(edge) * Math.pow(Math.abs(edge), 1.4) * 3.2 * (t.rung >= 6 ? 1 : 0.45);
+      let shift = Math.sign(edge) * Math.pow(Math.abs(edge), 1.4) * 3.2 * (t.rung >= 6 ? 1 : 0.45);
+      /* Diminishing returns on dominance. The further one side is ahead, the
+         less each additional increment of advantage buys: what remains is the
+         opponent's most defensible ground, its dispersed and surviving
+         capability, and the part of the problem that force does not solve.
+         Without this the model marches every won theatre to total victory,
+         which is not how any of these conflicts have actually gone. */
+      const lead = Math.abs(t.control - 50) / 50;
+      shift *= (1 - lead * 0.85);
       t.control = clamp(t.control + shift + t.momentum * 0.25, 2, 98);
       t.momentum *= 0.55;
 
@@ -335,10 +344,17 @@
   function domestic(S) {
     MP.powerList.forEach(id => {
       const p = S.powers[id], P = MP.POWERS[id];
-      const econSignal = (p.econ - 100) * 0.22;
-      const warSignal = -(p.warStress / 100) * 3.4 * (0.4 + P.domConstr);
+      /* Approval moves on the CHANGE in conditions as much as the level: a
+         population adjusts to a bad situation that is no longer deteriorating.
+         The per-quarter move is bounded so that a long war grinds support down
+         without pinning it at zero, which would be both unrealistic and
+         uninformative. */
+      const econSignal = clamp((p.econ - 100) * 0.12, -3.0, 3.0);
+      const warSignal = -(p.warStress / 100) * 2.6 * (0.4 + P.domConstr);
       const legitSignal = (p.legit - 50) * 0.03;
-      p.approval = clamp(p.approval + econSignal + warSignal + legitSignal + (50 - p.approval) * 0.06, 0, 100);
+      const floor = 8 + (1 - P.domConstr) * 14;   /* closed systems report, and hold, a base */
+      const move = clamp(econSignal + warSignal + legitSignal + (46 - p.approval) * 0.10, -6, 6);
+      p.approval = clamp(p.approval + move, floor * 0.5, 100);
       /* alliances decay toward their structural level unless actively managed */
       p.cohesion = clamp(p.cohesion + (p.cohesionBase - p.cohesion) * 0.16 + (p.legit - 50) * 0.02, 0, 100);
       p.legit = clamp(p.legit + (p.legitBase - p.legit) * 0.12, 0, 100);

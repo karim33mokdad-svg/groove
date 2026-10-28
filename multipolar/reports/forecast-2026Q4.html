@@ -1,0 +1,626 @@
+<title>State of the System 2036</title>
+<style>
+  :root{
+    --ground:#0d1016; --panel:#141924; --panel2:#1b2231; --line:#273144; --line2:#36425c;
+    --ink:#e9edf4; --dim:#9aa7bd; --dimmer:#6b7893;
+    --accent:#e8a33d; --hot:#e4573d; --cool:#45a88c; --cyan:#58a6d8; --violet:#a98cd8;
+    --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;
+  }
+  :root:not([data-theme="dark"]){
+    --ground:#fbfaf8; --panel:#ffffff; --panel2:#f2f3f6; --line:#dfe3ea; --line2:#c6ccd8;
+    --ink:#161b24; --dim:#4f5a6d; --dimmer:#7a8599;
+    --accent:#b6741a; --hot:#bf3f28; --cool:#2d7e66; --cyan:#2a6f99; --violet:#6b4fa0;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ground:#0d1016; --panel:#141924; --panel2:#1b2231; --line:#273144; --line2:#36425c;
+      --ink:#e9edf4; --dim:#9aa7bd; --dimmer:#6b7893;
+      --accent:#e8a33d; --hot:#e4573d; --cool:#45a88c; --cyan:#58a6d8; --violet:#a98cd8;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0d1016; --panel:#141924; --panel2:#1b2231; --line:#273144; --line2:#36425c;
+    --ink:#e9edf4; --dim:#9aa7bd; --dimmer:#6b7893;
+    --accent:#e8a33d; --hot:#e4573d; --cool:#45a88c; --cyan:#58a6d8; --violet:#a98cd8;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--serif);
+    font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  .page{max-width:860px;margin:0 auto;padding:0 20px 90px}
+  p{margin:0 0 1.05em;max-width:68ch}
+  h1,h2,h3,h4,.ui{font-family:var(--sans)}
+  .mono,td.n,th.n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  a{color:var(--cyan)}
+
+  /* masthead */
+  header{padding:48px 0 26px;border-bottom:3px solid var(--line2)}
+  .kicker{font-family:var(--sans);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);font-weight:700}
+  h1{font-size:clamp(34px,7vw,58px);line-height:1.02;letter-spacing:-.025em;margin:14px 0 0;
+    font-weight:800;text-wrap:balance}
+  h1 em{font-style:normal;color:var(--accent)}
+  .standfirst{font-size:19px;color:var(--dim);margin-top:16px;max-width:60ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:22px;
+    font-family:var(--sans);font-size:12px;color:var(--dimmer)}
+  .meta b{color:var(--dim);font-weight:600}
+
+  /* the frame that must not be skipped */
+  .frame{border:1px solid var(--line2);border-left:4px solid var(--accent);background:var(--panel);
+    padding:18px 20px;margin:26px 0;border-radius:3px}
+  .frame h4{margin:0 0 8px;font-size:13px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+  .frame p{font-size:15px;color:var(--dim);margin-bottom:.7em}
+  .frame p:last-child{margin-bottom:0}
+
+  section{padding-top:46px}
+  h2{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--dimmer);
+    font-weight:700;margin:0 0 6px;display:flex;align-items:baseline;gap:12px}
+  h2 .num{color:var(--accent);font-variant-numeric:tabular-nums}
+  h3{font-size:clamp(23px,4vw,30px);line-height:1.15;letter-spacing:-.02em;margin:0 0 18px;
+    font-weight:750;text-wrap:balance}
+  h4{font-size:17px;margin:30px 0 10px;font-weight:700;letter-spacing:-.01em}
+  .lede{font-size:19px;color:var(--ink)}
+  .lede strong{color:var(--accent);font-weight:700}
+
+  /* data furniture */
+  .tablewrap{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:4px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:13.5px}
+  th{text-align:left;padding:10px 12px;background:var(--panel2);color:var(--dimmer);
+    font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+    border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.n,th.n{text-align:right}
+  td b{font-weight:700}
+  .sub{color:var(--dimmer);font-size:11.5px;display:block;margin-top:2px;line-height:1.35}
+
+  .bar{position:relative;height:6px;border-radius:3px;background:var(--panel2);overflow:hidden;min-width:70px}
+  .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--accent)}
+  .bar i.hot{background:var(--hot)} .bar i.cool{background:var(--cool)} .bar i.cy{background:var(--cyan)}
+
+  /* range: p10 — median — p90 */
+  .rng{position:relative;height:18px;min-width:120px}
+  .rng .tk{position:absolute;left:0;right:0;top:8px;height:3px;background:var(--panel2);border-radius:2px}
+  .rng .sp{position:absolute;top:8px;height:3px;border-radius:2px;background:var(--line2)}
+  .rng .md{position:absolute;top:3px;width:3px;height:13px;border-radius:2px;background:var(--accent)}
+
+  .big{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:4px;margin:22px 0}
+  .big div{background:var(--panel);padding:16px 14px}
+  .big .k{font-family:var(--sans);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dimmer)}
+  .big .v{font-family:var(--sans);font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:5px;
+    font-variant-numeric:tabular-nums}
+  .big .s{font-size:12px;color:var(--dim);margin-top:3px;font-family:var(--sans);line-height:1.4}
+
+  .chip{display:inline-block;font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid var(--line2);color:var(--dim);
+    white-space:nowrap}
+  .chip.strong{color:var(--cool);border-color:var(--cool)}
+  .chip.moderate{color:var(--accent);border-color:var(--accent)}
+  .chip.weak{color:var(--hot);border-color:var(--hot)}
+
+  blockquote{margin:22px 0;padding:2px 0 2px 20px;border-left:3px solid var(--accent);
+    font-size:19px;color:var(--ink);max-width:58ch}
+  .caveat{font-size:14.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:14px;margin-top:22px}
+  .caveat b{color:var(--accent)}
+  hr{border:none;border-top:1px solid var(--line);margin:40px 0}
+  .foot{margin-top:56px;padding-top:22px;border-top:3px solid var(--line2);
+    font-family:var(--sans);font-size:13px;color:var(--dimmer)}
+  @media(max-width:560px){ body{font-size:16px} .page{padding:0 15px 70px} }
+</style>
+
+<div class="page">
+
+<header>
+  <div class="kicker">Multipolar · ensemble forecast</div>
+  <h1>Primacy without <em>preponderance</em></h1>
+  <p class="standfirst">Four hundred simulated decades, run forward from the world as it stands on
+    28 October 2026. What the model says about who leads, who falls, what burns, and what it costs.</p>
+  <div class="meta">
+    <span><b>Baseline</b> 28 Oct 2026</span>
+    <span><b>Horizon</b> Q4 2036</span>
+    <span><b>Runs</b> 400 × 40 quarters</span>
+    <span><b>Actors</b> 14, all autonomous</span>
+    <span><b>Theatres</b> 11</span>
+  </div>
+</header>
+
+<div class="frame">
+  <h4>Read this first</h4>
+  <p>This is <b>model output, not a prediction</b>. Every percentage below is the frequency of an
+    outcome across 400 runs of one set of equations. It is a statement about what these assumptions
+    imply when you follow them for ten years — not about what will happen.</p>
+  <p>The model is wrong in ways I cannot enumerate, because any model of international politics is.
+    What it can do is force assumptions to be explicit and consistent, then show where they lead.
+    Where its output conflicts with your judgement, your judgement may well be the better instrument —
+    but the disagreement will now be about something specific.</p>
+  <p>Nobody plays a seat in these runs. There is no protagonist and no advice here about what any
+    state should do.</p>
+</div>
+
+<section>
+  <h2><span class="num">01</span> The finding</h2>
+  <h3>The United States stays first, and almost never by enough to run the system</h3>
+
+  <p class="lede">In <strong>99%</strong> of runs the United States ends 2036 as the largest single
+    concentration of usable power. In <strong>83%</strong> of those same runs the system is
+    <strong>multipolar</strong> — meaning no power holds the margin that would let it set terms. Those
+    two facts are not in tension. They are the decade's central structural condition.</p>
+
+  <p>A pole, in this model, is a power within reach of the leader. The United States is first almost
+    always; it clears the second-placed power by the 1.75× margin that would make the system unipolar
+    in only 17% of runs. American primacy is real and it persists. American preponderance — the
+    capacity to impose outcomes rather than contest them — mostly does not return.</p>
+
+  <div class="big">
+    <div><div class="k">Multipolar</div><div class="v">83%</div><div class="s">No power holds a commanding margin</div></div>
+    <div><div class="k">Unipolar</div><div class="v">17%</div><div class="s">US clears the field by 1.75×</div></div>
+    <div><div class="k">US leads</div><div class="v">99%</div><div class="s">Largest share of usable power</div></div>
+    <div><div class="k">Bipolar</div><div class="v">&lt;1%</div><div class="s">A clean two-power system is rare</div></div>
+  </div>
+
+  <p>The most counter-intuitive result is the one that does <em>not</em> appear: a Chinese overtake.
+    Across 400 runs China ends ahead of the United States in none of them. That is a strong claim and
+    it deserves the scrutiny it will attract — see §2 for what drives it and §9 for why it may be the
+    most fragile output in the report.</p>
+</section>
+
+<section>
+  <h2><span class="num">02</span> Who is the superpower</h2>
+  <h3>Three concentrations of mass, one of which can actually decide</h3>
+
+  <p>Power here is a composite: economic mass, military capability, technology base, and alliance
+    reach — then discounted twice. Once for whether the state can spend its capability (cohesion and
+    standing), and once for <em>actorness</em>: whether the polity can take a decision at all.</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr>
+      <th>Power</th><th class="n">Share of system power</th><th>Range p10–p90</th>
+      <th class="n">Pole</th><th>What sets the ceiling</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b>United States</b><span class="sub">Checked presidential</span></td>
+        <td class="n"><b>33.6%</b></td>
+        <td><div class="rng"><div class="tk"></div><div class="sp" style="left:48%;width:30%"></div><div class="md" style="left:62%"></div></div><span class="sub">28.7 — 37.5</span></td>
+        <td class="n">100%</td>
+        <td>Alliance reach is the asset; domestic veto points and a two-year electoral metronome are the constraint</td></tr>
+      <tr><td><b>China</b><span class="sub">Party-institutional</span></td>
+        <td class="n"><b>21.1%</b></td>
+        <td><div class="rng"><div class="tk"></div><div class="sp" style="left:28%;width:26%"></div><div class="md" style="left:39%"></div></div><span class="sub">18.1 — 24.2</span></td>
+        <td class="n">88%</td>
+        <td>Can decide fastest of the three; has almost no alliance mass and a shrinking working-age population</td></tr>
+      <tr><td><b>European Union</b><span class="sub">Supranational union</span></td>
+        <td class="n"><b>21.1%</b></td>
+        <td><div class="rng"><div class="tk"></div><div class="sp" style="left:31%;width:23%"></div><div class="md" style="left:39%"></div></div><span class="sub">19.5 — 23.1</span></td>
+        <td class="n">88%</td>
+        <td>Mass equal to China's, converted to action at a 39% discount for unanimity</td></tr>
+      <tr><td>Japan<span class="sub">Dominant-party</span></td>
+        <td class="n">6.2%</td><td><span class="sub">5.7 — 6.9</span></td><td class="n">0%</td>
+        <td>Rearming from a low base; the largest alliance component of any actor</td></tr>
+      <tr><td>India<span class="sub">Dominant-party</span></td>
+        <td class="n">5.4%</td><td><span class="sub">4.9 — 5.9</span></td><td class="n">0%</td>
+        <td>The only major economy growing through the decade; rises slowly from a small base</td></tr>
+      <tr><td>Russia<span class="sub">Personalist</span></td>
+        <td class="n">2.5%</td><td><span class="sub">2.1 — 3.4</span></td><td class="n">0%</td>
+        <td>Nuclear standing without an economy to sustain it; declines through the decade</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>Why China does not overtake, in this model</h4>
+  <p>Decomposing the index makes the mechanism legible, and it is not about output. China's economic
+    component is roughly two-thirds of the American one and closing slowly. Its military component is
+    about a quarter. Its <em>alliance</em> component is approximately zero — Japan alone carries more
+    alliance mass than China does. The United States is not ahead because it produces more; it is
+    ahead because it produces a great deal <em>and</em> the model counts the Japanese, European and
+    other aligned economies as partially usable, and counts nothing for Beijing.</p>
+  <p>Against that, China holds the one advantage the others lack: it can take a decision. Its
+    actorness discount is 0.91, against 0.71 for the United States and 0.61 for the European Union.
+    A decade in which Washington is gridlocked and Brussels is deadlocked is a decade in which that
+    gap matters more than the index suggests.</p>
+
+  <h4>The European Union is the model's sharpest verdict</h4>
+  <p>On raw mass the EU is China's equal. On <em>usable</em> power it ends level, and only because its
+    cohesion and standing are high enough to partly offset a unanimity rule that costs it 39% of its
+    weight before anything is decided. An earlier version of this model, without that discount, ranked
+    the EU as a near-peer superpower leading the system a third of the time. That was the model
+    flattering an entity that cannot act, and it was wrong.</p>
+
+  <div class="caveat"><b>Where to push back.</b> Any single index of power is a weighting judgement,
+    and a different defensible set of weights reorders the middle of this table. The components are
+    reported separately for exactly that reason. The weighting is also what produces Russia at 2.5% —
+    an economy-heavy index will always rank a nuclear power with a small GDP low, and you may think
+    that understates what Moscow can do with what it has.</div>
+</section>
+
+<section>
+  <h2><span class="num">03</span> Who is the leadership</h2>
+  <h3>Instability concentrates exactly where the strain already is</h3>
+
+  <p>The model does not attempt to psychoanalyse named individuals; that would be invented precision.
+    It models offices and regime types: how many veto players stand between an executive and a
+    decision, how long that executive expects to last, when the next contest falls, what the regime's
+    legitimacy rests on, and how much policy survives a handover. Onto that it adds one
+    well-supported behavioural regularity — leaderships that perceive themselves <em>losing</em>
+    become risk-acceptant, while the same leaderships ahead turn cautious.</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Capital</th><th>Regime type</th><th class="n">Changes / decade</th>
+      <th class="n">Irregular</th><th>Reading</th></tr></thead>
+    <tbody>
+      <tr><td><b>Israel</b></td><td>Coalition parliamentary</td><td class="n">3.00</td><td class="n">36%</td>
+        <td>Enters the decade hung after the 27 October election. Highest scheduled churn on the board — which is also its recent record</td></tr>
+      <tr><td><b>Ukraine</b></td><td>Wartime emergency</td><td class="n">2.81</td><td class="n">39%</td>
+        <td>A ceasefire restarts an electoral clock martial law has suspended; the peace is the political crisis</td></tr>
+      <tr><td><b>United States</b></td><td>Checked presidential</td><td class="n">2.38</td><td class="n">11%</td>
+        <td>Two presidential cycles plus legislative turnover. Churn is high but <em>orderly</em> — the distinction that matters</td></tr>
+      <tr><td><b>Iran</b></td><td>Clerical-hybrid</td><td class="n">1.60</td><td class="n">38%</td>
+        <td>A leadership three quarters old, installed by decapitation. The most fragile position modelled</td></tr>
+      <tr><td>Pakistan</td><td>Competitive authoritarian</td><td class="n">1.66</td><td class="n">32%</td><td>Chronic financing need alongside a nuclear arsenal</td></tr>
+      <tr><td>Türkiye</td><td>Competitive authoritarian</td><td class="n">1.09</td><td class="n">30%</td><td>Currency stress against straits leverage</td></tr>
+      <tr><td>Russia</td><td>Personalist</td><td class="n">0.86</td><td class="n">40%</td>
+        <td>Stable until it is not: when a personalist system turns over, almost nothing of the programme survives</td></tr>
+      <tr><td>India</td><td>Dominant-party</td><td class="n">0.87</td><td class="n">42%</td><td>Scheduled contests against a strong growth record</td></tr>
+      <tr><td><b>China</b></td><td>Party-institutional</td><td class="n">0.24</td><td class="n">21%</td>
+        <td>The most stable leadership modelled. Continuity is the asset, and the succession question is the unpriced risk</td></tr>
+      <tr><td>European Union</td><td>Supranational</td><td class="n">0.07</td><td class="n">6%</td><td>Member governments change; the bloc's position barely moves</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <blockquote>The model's clearest leadership finding is not about any one capital. It is that
+    turnover clusters where economic strain, war stress and collapsed institutional trust already
+    overlap — and that each turnover widens the distribution of everything downstream.</blockquote>
+
+  <p>This matters for reading the rest of the report. A transition in a party-institutional system
+    hands over a programme; in a personalist or clerical system it hands over a vacuum, and doctrine,
+    risk appetite and alignments are all redrawn. Much of the variance in the ten-year outcomes
+    traces back to which systems turned over and when.</p>
+
+  <div class="caveat"><b>What this cannot see.</b> It has no view on who any successor would be, and
+    makes none. It treats succession as a draw from a distribution whose width is set by the regime
+    type. Real successions are specific people with specific beliefs, and the single most important
+    variable in several of these cases is therefore one the model deliberately refuses to guess.</div>
+</section>
+
+<section>
+  <h2><span class="num">04</span> What burns</h2>
+  <h3>The Taiwan Strait is the most dangerous place on the board, and it is not close</h3>
+
+  <p>Eleven theatres, each on a shared 0–10 escalation ladder. "Major war" means rung 7 or above —
+    organised great-power conflict — reached at any point in the decade.</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Theatre</th><th class="n">Escalates</th><th class="n">Major war</th>
+      <th class="n">Settles</th><th>Rung, now → 2036</th></tr></thead>
+    <tbody>
+      <tr><td><b>Taiwan Strait</b></td><td class="n">91%</td>
+        <td class="n"><b style="color:var(--hot)">39%</b><div class="bar"><i class="hot" style="width:39%"></i></div></td>
+        <td class="n">5%</td><td class="mono">3 → 5 <span class="sub">range 3–7</span></td></tr>
+      <tr><td><b>Ukraine</b></td><td class="n">66%</td>
+        <td class="n"><b style="color:var(--hot)">23%</b><div class="bar"><i class="hot" style="width:23%"></i></div></td>
+        <td class="n">29%</td><td class="mono">5 → 5 <span class="sub">range 4–6</span></td></tr>
+      <tr><td><b>Israel–Iran &amp; the Levant</b></td><td class="n">68%</td>
+        <td class="n"><b>13%</b><div class="bar"><i class="hot" style="width:13%"></i></div></td>
+        <td class="n">32%</td><td class="mono">4 → 4 <span class="sub">range 3–6</span></td></tr>
+      <tr><td><b>Lebanon</b></td><td class="n">60%</td>
+        <td class="n">8%<div class="bar"><i class="hot" style="width:8%"></i></div></td>
+        <td class="n">0%</td><td class="mono">4 → 5 <span class="sub">never reaches its floor</span></td></tr>
+      <tr><td>South China Sea</td><td class="n">52%</td><td class="n">6%</td><td class="n">45%</td><td class="mono">3 → 3</td></tr>
+      <tr><td>Red Sea &amp; Bab al-Mandab</td><td class="n">77%</td><td class="n">0%</td><td class="n">17%</td><td class="mono">3 → 4</td></tr>
+      <tr><td>Sahel &amp; West Africa</td><td class="n">43%</td><td class="n">0%</td><td class="n">28%</td><td class="mono">3 → 3</td></tr>
+      <tr><td>Arctic &amp; High North</td><td class="n">32%</td><td class="n">0%</td><td class="n">68%</td><td class="mono">2 → 1</td></tr>
+      <tr><td>Kashmir &amp; the LoC</td><td class="n">11%</td><td class="n">0%</td><td class="n">75%</td><td class="mono">3 → 2</td></tr>
+      <tr><td>Korean Peninsula</td><td class="n">10%</td><td class="n">0%</td><td class="n">88%</td><td class="mono">3 → 2</td></tr>
+      <tr><td>Himalayan Frontier</td><td class="n">1%</td><td class="n">0%</td><td class="n">98%</td><td class="mono">2 → 1</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>Taiwan: 39%, and why you should treat it sceptically</h4>
+  <p>This is the model's most consequential single number and its most contestable. Published expert
+    estimates for a Taiwan conflict this decade span roughly 5% to 50%, so 39% sits at the pessimistic
+    end of a very wide distribution. The mechanism driving it is specific: the Strait starts at
+    sustained grey-zone pressure, that pressure has no natural ceiling below armed incident, each
+    incident carries a small chance of a rung, and ten years is a great many quarters for a small
+    per-quarter hazard to compound. If you think the real ceiling on coercion-short-of-war is firmer
+    than the model's — that both capitals are better at stopping before the line than the model gives
+    them credit for — you should mark this number down, and you may be right.</p>
+  <p>Note also what the branch analysis says about that war: in runs where it happens, China's share
+    of system power ends at 19.1% against 22.1% where it does not. In this model the Taiwan war is
+    something China <em>loses by fighting</em>, whatever the military outcome.</p>
+
+  <h4>Ukraine settles in fewer than a third of runs</h4>
+  <p>The negotiation track running into Abu Dhabi in early November is in the baseline, and it helps:
+    a live track roughly doubles the per-quarter chance of the fighting stepping down a rung. It is
+    still not enough. The war comes fully to rest in 29% of runs; the median outcome is that it stays
+    at acknowledged strikes and sustained operations, neither resolved nor escalated, for most of the
+    decade. The front line itself barely moves — ending at 55% Russian-held against 58% today, with a
+    very wide range on either side. This is the war-duration pattern asserting itself: conflicts that
+    survive their first year end slowly, because the cheap settlements have already been refused.</p>
+
+  <h4>The quiet ones are a finding too</h4>
+  <p>Korea settles to coercive posturing in 88% of runs and the Himalayan frontier in 98%. The model
+    is saying that frozen disputes with functioning deterrence and no live claim-pressing stay frozen,
+    and that attention follows pressure rather than history. Kashmir is the case to watch here: 11%
+    escalation looks low against that dyad's record of compressed, days-long crises, and I would treat
+    it as the model under-reading a genuinely crisis-prone relationship.</p>
+</section>
+
+<section>
+  <h2><span class="num">05</span> The relationships</h2>
+  <h3>Hardening along existing lines, with one significant drift</h3>
+
+  <p>Relationship values run −1 (hostile) to +1 (allied). They move with events and with changes of
+    government, and revert toward a structural level that itself shifts when a government changes.</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Dyad</th><th class="n">2026</th><th class="n">2036</th><th class="n">Δ</th><th>Reading</th></tr></thead>
+    <tbody>
+      <tr><td>US — EU</td><td class="n">0.8</td><td class="n">1.0</td><td class="n" style="color:var(--cool)">+0.1</td><td>The war consolidates the Atlantic relationship rather than straining it</td></tr>
+      <tr><td>China — Russia</td><td class="n">0.6</td><td class="n">0.7</td><td class="n" style="color:var(--cool)">+0.1</td><td>Deepens, asymmetrically: Russia needs it more each year</td></tr>
+      <tr><td>US — China</td><td class="n">−0.5</td><td class="n">−0.7</td><td class="n" style="color:var(--hot)">−0.2</td><td>Hardens steadily, with no rupture and no thaw</td></tr>
+      <tr><td>Russia — EU</td><td class="n">−0.7</td><td class="n">−0.9</td><td class="n" style="color:var(--hot)">−0.2</td><td>The most durable hostility on the board</td></tr>
+      <tr><td><b>US — India</b></td><td class="n">0.3</td><td class="n">0.2</td><td class="n" style="color:var(--hot)">−0.2</td><td><b>Drifts apart.</b> Multi-alignment works, and the alignment it works away from is Washington's</td></tr>
+      <tr><td>China — EU</td><td class="n">−0.1</td><td class="n">−0.2</td><td class="n" style="color:var(--hot)">−0.1</td><td>Cools, but stays the least committed of the major dyads</td></tr>
+      <tr><td>India — Russia</td><td class="n">0.5</td><td class="n">0.5</td><td class="n">0.0</td><td>Unmoved by a decade of pressure — the most stable line in the table</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>The blocs that recur</h4>
+  <p>Clustering the live relationship graph at the end of each run produces three recognisable
+    configurations, and one that deserves attention.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Configuration</th><th class="n">Frequency</th><th>Character</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">US · EU · Japan · Israel · Taiwan · Ukraine</td><td class="n">45%</td>
+        <td>The Western bloc, intact and if anything tighter than at baseline</td></tr>
+      <tr><td class="mono">China · Russia · Iran · North Korea · Pakistan</td><td class="n">40%</td>
+        <td>A counter-bloc that coheres — though in 35% of runs it coheres <em>without</em> Iran</td></tr>
+      <tr><td class="mono">India · Saudi Arabia</td><td class="n">36%</td>
+        <td>The genuinely non-aligned pole: large, growing, and committed to neither side</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The third row is the structurally interesting one. The decade does not produce two blocs and a
+    scattering of irrelevance. It produces two blocs and a third group — India and the Gulf most
+    consistently — that is wealthy, growing, and makes a policy of belonging to neither. On the
+    model's numbers, that group's weight rises through the decade while both blocs' internal cohesion
+    costs rise. Non-alignment is not a residual category here; it is a strategy that pays.</p>
+</section>
+
+<section>
+  <h2><span class="num">06</span> The economics</h2>
+  <h3>The energy shock unwinds; the fragmentation does not</h3>
+
+  <div class="big">
+    <div><div class="k">Oil, 2036</div><div class="v">$77</div><div class="s">p10–p90: $72 – $83. Peaks near $89 first</div></div>
+    <div><div class="k">Inflation</div><div class="v">3.3%</div><div class="s">p10–p90: 2.3 – 4.4. Above target, below crisis</div></div>
+    <div><div class="k">Trade index</div><div class="v">88</div><div class="s">From 100 at baseline. It does not recover</div></div>
+    <div><div class="k">Integration</div><div class="v">87</div><div class="s">Decoupling is real but partial</div></div>
+  </div>
+
+  <p>The oil price is the clearest good news in the report and the least surprising. Brent near $97
+    today reflects a war premium, and premia decay: the median run sees the price drift back to the
+    high seventies as the Middle East theatres cool. Energy exporters lose the windfall that is
+    currently funding them — Saudi Arabia ends the decade with the strongest economic index on the
+    board anyway, at 103, because a decade at even moderate prices is still a decade of revenue.</p>
+
+  <p>Inflation is the channel through which all of this reaches ordinary politics, and it does not
+    fully normalise: the median run ends at 3.3%, persistently above target, with a long right tail.
+    That is the single most politically consequential number in this section. Sustained above-target
+    inflation is the most reliable predictor of incumbent defeat in the historical record, in every
+    electoral system, and it is doing a great deal of the work behind §3's leadership churn.</p>
+
+  <p>The trade index tells the structural story. It starts at 96 — already depressed by the energy
+    shock and an effective US tariff rate near 18.5% — and ends at 88. It does not recover in the
+    median run or anywhere near the optimistic tail. The decade's economic signature is not collapse;
+    it is a permanent, moderate tax on exchange, levied by tariffs, chokepoint risk and the slow
+    separation of two technology ecosystems.</p>
+
+  <p>Economic trajectories diverge sharply, and demography explains most of it. India ends at 103 and
+    is the only major economy meaningfully above its baseline. The United States ends at 95, China at
+    93, the EU at 96, Japan at 95 — all modestly below, all for the same reason: working-age
+    populations that are flat or shrinking, against debt service that is not. Russia ends at 86 and
+    Iran at 78, which is what a decade of war economy and maximum pressure looks like when the
+    adaptation that sanctions provoke can no longer keep pace with the damage.</p>
+</section>
+
+<section>
+  <h2><span class="num">07</span> The society</h2>
+  <h3>Strain concentrates, and then feeds back into the politics that caused it</h3>
+
+  <p>The model carries two sociological measures: <em>discontent</em>, driven mainly by prices and war
+    rather than by output, and <em>institutional trust</em>, which falls faster than it rebuilds. Both
+    feed into approval, into the political capital a government has to spend abroad, and into the
+    hazard of a leadership losing power outside the scheduled process.</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Society</th><th class="n">Discontent</th><th class="n">Trust</th>
+      <th class="n">Approval</th><th class="n">Legitimacy</th></tr></thead>
+    <tbody>
+      <tr><td><b>Iran</b></td><td class="n">34.2 <div class="bar"><i class="hot" style="width:34%"></i></div></td><td class="n">64</td><td class="n">14</td><td class="n">4</td></tr>
+      <tr><td><b>Ukraine</b></td><td class="n">33.4 <div class="bar"><i class="hot" style="width:33%"></i></div></td><td class="n">67</td><td class="n">42</td><td class="n">55</td></tr>
+      <tr><td><b>Israel</b></td><td class="n">32.3 <div class="bar"><i class="hot" style="width:32%"></i></div></td><td class="n">69</td><td class="n">39</td><td class="n">25</td></tr>
+      <tr><td><b>Russia</b></td><td class="n">31.3 <div class="bar"><i class="hot" style="width:31%"></i></div></td><td class="n">70</td><td class="n">19</td><td class="n">20</td></tr>
+      <tr><td>China</td><td class="n">30.6</td><td class="n">75</td><td class="n">31</td><td class="n">46</td></tr>
+      <tr><td>Taiwan</td><td class="n">30.5</td><td class="n">74</td><td class="n">38</td><td class="n">51</td></tr>
+      <tr><td>European Union</td><td class="n">27.3</td><td class="n">74</td><td class="n">37</td><td class="n">72</td></tr>
+      <tr><td>United States</td><td class="n">26.2</td><td class="n">74</td><td class="n">39</td><td class="n">49</td></tr>
+      <tr><td>India</td><td class="n">26.2</td><td class="n">76</td><td class="n">51</td><td class="n">61</td></tr>
+      <tr><td>Saudi Arabia</td><td class="n">23.5</td><td class="n">77</td><td class="n">50</td><td class="n">50</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>The ordering is the finding, and it is almost exactly the ordering of war exposure. The four
+    societies under most strain at the end of the decade are the four that spend it at or next to a
+    war. Nothing else in the model — not relative decline, not trade fragmentation, not leadership
+    turnover — moves these numbers as far as sustained conflict and the prices that come with it.</p>
+
+  <p>Legitimacy diverges much more sharply than discontent. Iran ends at 4 and North Korea at 4;
+    Russia at 20 and Israel at 25. These are states whose capacity to assemble coalitions, win votes
+    in international institutions, or make commitments others believe has been substantially spent.
+    That is a real strategic cost and it is slow to repair. The European Union ends at 72, the highest
+    on the board — a reminder that the thing the EU converts into power at a heavy discount is
+    nonetheless a genuine asset.</p>
+
+  <p>Sustained protest appears in the median run 0.59 times across the whole system per decade, with a
+    p90 of 2. Governments survive these episodes far more often than they fall. What the episodes
+    reliably do is consume the political capital that foreign policy runs on — which is the main
+    channel by which domestic strain becomes an international outcome.</p>
+</section>
+
+<section>
+  <h2><span class="num">08</span> The tails</h2>
+  <h3>Low-probability, high-consequence, and not zero</h3>
+
+  <div class="big">
+    <div><div class="k">Nuclear use, any</div><div class="v">2%</div><div class="s">Over ten years, anywhere</div></div>
+    <div><div class="k">Iran at threshold</div><div class="v">3%</div><div class="s">Programme recovers to weapons-capable</div></div>
+    <div><div class="k">Iran suppressed</div><div class="v">26%</div><div class="s">Programme stays below 40</div></div>
+    <div><div class="k">US rupture</div><div class="v">11%</div><div class="s">Irregular transition or severe strain</div></div>
+  </div>
+
+  <p>The 2% figure for nuclear use took several passes to calibrate and the intermediate results are
+    worth stating. An early version produced 25%, which is not defensible: eighty years of non-use is
+    the strongest base rate in the entire model. A later version produced exactly 0%, which is equally
+    indefensible — a decade containing active wars between nuclear-armed states does not carry zero
+    risk, and a model that reports zero is hiding a tail rather than estimating it. The final figure
+    is a continuous hazard calibrated against the realised risk distribution rather than against a
+    round number. It is low because the historical record says it should be low, and non-zero because
+    the record is not a guarantee.</p>
+
+  <p>The Iranian programme is the most interesting tail. Its median outcome is neither suppression nor
+    breakout but <strong>partial reconstitution</strong> — an index of 51, from 26 today, with a wide
+    range. Strikes degraded the infrastructure and bought years; they did not end the programme, and
+    they strengthened the domestic argument for a deterrent. The roughly 440 kg of enriched uranium
+    unaccounted for means capability is uncertain rather than demonstrably ended, and the model treats
+    it that way. In the branch where the programme recovers toward threshold, nothing else in the
+    system changes much — which is itself a finding, and an uncomfortable one.</p>
+</section>
+
+<section>
+  <h2><span class="num">09</span> What would change the answer</h2>
+  <h3>The four forks, and what each is worth</h3>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Branch</th><th class="n">Frequency</th><th>What actually differs</th></tr></thead>
+    <tbody>
+      <tr><td><b>Taiwan reaches war</b></td><td class="n">39%</td>
+        <td>China's share 19.1% vs 22.1%. Nuclear risk 4% vs 1%. Oil +$1.7. <b>The largest single fork in the decade</b>, and it costs the initiator more than anyone</td></tr>
+      <tr><td><b>Ukraine settles</b></td><td class="n">29%</td>
+        <td>Almost nothing at system level: US and Chinese shares unchanged, oil −$0.9, nuclear risk 1% vs 3%. The war is already priced in</td></tr>
+      <tr><td><b>Iran reconstitutes</b></td><td class="n">28%</td>
+        <td>US share marginally up, system structure unchanged. A regional transformation that barely registers globally</td></tr>
+      <tr><td><b>US internal rupture</b></td><td class="n">11%</td>
+        <td>US share 32.9% vs 33.7% — a real but modest cost. American primacy in this model is structural enough to survive a bad decade of its own politics</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>The Ukraine result deserves emphasis because it cuts against intuition. A negotiated end to the
+    largest land war in Europe since 1945 changes the system's power distribution, its economics and
+    its alignments by very little. The war's effects have already been absorbed: the European
+    rearmament decision is taken, the Russian economic reorientation has happened, the alignments have
+    hardened. Settlement matters enormously to Ukrainians and Russians. On the model's numbers it does
+    not reorder the system.</p>
+
+  <p>The Taiwan result cuts the other way and is the reason that theatre dominates this report. It is
+    the only branch that moves system structure, the economy and the nuclear tail together.</p>
+</section>
+
+<section>
+  <h2><span class="num">10</span> The assumptions</h2>
+  <h3>Fourteen claims about how international politics behaves</h3>
+
+  <p>These are not decoration. Each is implemented as a mechanism, each has an empirical literature,
+    and several are contested — where they are, the model deliberately uses the conservative end of
+    the estimated effect. A forecast built on the strongest claimed version of every disputed finding
+    is a forecast built to be wrong.</p>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Pattern</th><th>Claim</th><th class="n">Evidence</th></tr></thead>
+    <tbody>
+      <tr><td><b>Loss framing</b></td><td>Leaderships that perceive themselves losing accept risks they would refuse when ahead. A state facing loss is more dangerous than the same state facing gain</td><td class="n"><span class="chip strong">Strong</span></td></tr>
+      <tr><td><b>War-duration hazard</b></td><td>Wars surviving their first year become progressively harder to end; the cheap settlements have already been refused</td><td class="n"><span class="chip strong">Strong</span></td></tr>
+      <tr><td><b>Sanctions base rate</b></td><td>Some part of the stated objective achieved in roughly a third of cases; success tracks coalition breadth and modest demands, not severity</td><td class="n"><span class="chip strong">Strong</span></td></tr>
+      <tr><td><b>Energy and incumbents</b></td><td>Sustained price increases transmit to inflation and from there to incumbent defeat, in every electoral system</td><td class="n"><span class="chip strong">Strong</span></td></tr>
+      <tr><td><b>Ceasefire fragility</b></td><td>Pauses without enforcement or settlement fail at high rates, and most failures come early. Local humanitarian pauses rarely generalise</td><td class="n"><span class="chip strong">Strong</span></td></tr>
+      <tr><td><b>Rally and decay</b></td><td>An attack produces a surge in support that decays within two to four quarters, often leaving approval below where it started</td><td class="n"><span class="chip strong">Strong</span></td></tr>
+      <tr><td><b>Demographic drag</b></td><td>Trend growth tracks working-age population plus productivity; ageing is a compounding drag no short-run policy offsets</td><td class="n"><span class="chip strong">Strong</span></td></tr>
+      <tr><td><b>Power transition</b></td><td>War risk peaks not under hegemony but when a dissatisfied challenger approaches parity</td><td class="n"><span class="chip moderate">Moderate</span></td></tr>
+      <tr><td><b>Stability–instability</b></td><td>Nuclear dyads see fewer full wars and more sub-war violence</td><td class="n"><span class="chip moderate">Moderate</span></td></tr>
+      <tr><td><b>Alliance reliability</b></td><td>Formal commitments honoured in roughly two-thirds to three-quarters of cases; informal assurances far worse</td><td class="n"><span class="chip moderate">Moderate</span></td></tr>
+      <tr><td><b>Counter-proliferation</b></td><td>Strikes delay programmes by years without ending them, and strengthen the case for a deterrent. Negotiated constraint has the better record and the worse durability</td><td class="n"><span class="chip moderate">Moderate</span></td></tr>
+      <tr><td><b>New-leader risk</b></td><td>Leaders installed irregularly show elevated conflict propensity while establishing standing</td><td class="n"><span class="chip moderate">Moderate</span></td></tr>
+      <tr><td><b>Fiscal-military overstretch</b></td><td>Powers sustaining military burdens above their growth rate decline relatively over decades</td><td class="n"><span class="chip moderate">Moderate</span></td></tr>
+      <tr><td><b>Interdependence damping</b></td><td>Deep trade ties modestly reduce war probability between partners. 1914 is the standing refutation of the strong form</td><td class="n"><span class="chip weak">Weak</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">11</span> The limits</h2>
+  <h3>Where this is most likely to be wrong</h3>
+
+  <p><b>It cannot see discontinuity.</b> No technological shock, no pandemic, no financial crisis, no
+    climate event, no ideological movement. The decade 2026–2036 will contain at least one
+    system-reordering surprise, and by construction it is not here. Every number in this report is
+    conditional on nothing arriving from outside the model's categories — which is the one thing the
+    historical record most reliably refutes.</p>
+
+  <p><b>Its power index is a judgement.</b> The weights — economic mass 40%, military 32%, technology
+    14%, alliance reach 14% — are defensible and they are not the only defensible set. A
+    military-weighted index ranks Russia far higher. A technology-weighted index ranks Taiwan and
+    Japan higher. The components are reported separately so you can reweigh them.</p>
+
+  <p><b>Taiwan at 39% is probably the weakest number here.</b> It sits at the pessimistic end of
+    published expert ranges and it comes from compounding a small per-quarter hazard over forty
+    quarters. If the real ceiling on grey-zone coercion is firmer than modelled, this figure falls
+    substantially, and much of §4 falls with it.</p>
+
+  <p><b>China's non-overtake is the most load-bearing assumption.</b> It follows from demography, debt,
+    technology controls and the absence of alliance mass. Each is defensible; together they may
+    compound into more pessimism about Chinese trajectory than the evidence supports. If you weight
+    alliance mass lower — and there is a real argument that counting allies' GDP toward a power's own
+    index flatters the United States — the gap narrows considerably.</p>
+
+  <p><b>It does not model the thing it is about.</b> There are no people in this simulation. There are
+    offices, indices and hazards. Real conflicts kill real people, displace them, and end their
+    societies' futures in ways no index represents. The million displaced in Lebanon and the four
+    thousand dead appear in this model as a tension value. That is the abstraction the method
+    requires, and it is a serious one.</p>
+</section>
+
+<hr>
+
+<div class="foot">
+  <p><b>Method.</b> 400 runs × 40 quarters from a baseline of 28 October 2026, built from public
+    reporting. Every capital is autonomous: each enumerates its legal moves each quarter, scores them
+    against its own interests, doctrine, escalation tolerance and red-line exposure, and acts. There
+    is no player. Draws come from a seeded generator, so the whole ensemble is reproducible from
+    seed 20261028.</p>
+  <p><b>Provenance.</b> Baseline facts are from public reporting as of 28 October 2026: the Iran war
+    and its April ceasefire, the confirmation of a new Iranian supreme leader on 9 March, the Lebanon
+    war and its de jure April ceasefire, the Ukraine negotiation track and the Oleshky pause, the hung
+    Israeli election of 27 October, the US midterms of 3 November, Brent near $97, IMF headline
+    inflation near 4.7% for 2026. Capability figures are rounded open-source approximations and should
+    not be cited.</p>
+  <p><b>Not affiliated with any government or organisation.</b> No part of this is advice to any state
+    about what it should do. It is one model's account of where its own assumptions lead.</p>
+</div>
+
+</div>
