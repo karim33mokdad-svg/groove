@@ -214,7 +214,13 @@
     if (thId) {
       redline = MP.crossesRedline(actionId, S, actor, MP.THEATERS[thId], S.theaters[thId]);
       if (redline) {
-        applyTheaterDelta(S, thId, { tension: 14, rung: 1 }, 0);
+        /* Crossing a declared threshold always produces counter-escalation, but
+           it does not automatically carry the theatre up a rung: the injured
+           party still chooses how to answer, and most answers are below the
+           level of the provocation. The higher the ladder already is, the more
+           reluctant that choice becomes. */
+        const climbs = MP.rnd() < 0.45 / (1 + S.theaters[thId].rung * 0.18);
+        applyTheaterDelta(S, thId, { tension: 14, rung: climbs ? 1 : 0 }, 0);
         applyGlobalDelta(S, { nuclearRisk: MP.THEATERS[thId].nuclearDyad ? 5 : 2 }, 0);
         MP.addAff(S, actor, redline.opp, -0.12);
         S.powers[redline.opp].approval = clamp(S.powers[redline.opp].approval + 4, 0, 100);

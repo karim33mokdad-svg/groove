@@ -70,7 +70,7 @@
       /* escalation aversion scales inversely with doctrinal risk tolerance.
          Note the asymmetry: nobody wants the rung they are on, everybody wants
          the position it would buy. That tension is the whole game. */
-      const escAv = (1 - P.escTol);
+      const escAv = (1 - MP.effEscTol(S, id));
       const st = S.theaters[thId];
       u -= (fx.th.tension || 0) * 1.1 * escAv * w;
       u -= Math.max(0, fx.th.rung || 0) * 24 * escAv * w;
@@ -85,7 +85,7 @@
     }
 
     if (fx.g) {
-      u -= (fx.g.nuclearRisk || 0) * (2.6 + S.g.nuclearRisk / 12) * (1 - P.escTol);
+      u -= (fx.g.nuclearRisk || 0) * (2.6 + S.g.nuclearRisk / 12) * (1 - MP.effEscTol(S, id));
       u += (fx.g.trade || 0) * 0.7 * clamp(P.gdp / 12, 0.2, 1.5);
       u += (fx.g.oil || 0) * P.oilBeta * 2.4;
     }
@@ -146,9 +146,12 @@
       /* capitals do read each other's declared thresholds before acting */
       if (f.redlineRisk) {
         const w = cand.theater ? theaterWeight(S, id, cand.theater) : 1;
-        score -= f.redlineRisk * 34 * (1 - P.escTol) * w;
+        const rung = cand.theater ? S.theaters[cand.theater].rung : 0;
+        /* provoking a threshold in a theatre already at war is a different
+           decision from provoking one in peacetime, and is priced that way */
+        score -= f.redlineRisk * 34 * (1 + rung * 0.38) * (1 - MP.effEscTol(S, id)) * w;
       }
-      score *= (P.bias[f.action.cat] || 1);
+      score *= (P.bias[f.action.cat] || 1) * ((ps.biasShift && ps.biasShift[f.action.cat]) || 1);
       score -= f.cost * 1.4;
       /* retaliation pressure: answer whoever hit you last turn */
       if (mood.aggressors[f.ctx.target]) score += mood.aggressors[f.ctx.target] * 9;

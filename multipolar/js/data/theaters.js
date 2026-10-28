@@ -16,18 +16,22 @@
       lat: 48.4, lon: 33.0,
       sideA: 'RU', sideB: 'UA', sideALabel: 'Russia', sideBLabel: 'Ukraine',
       backers: { RU: ['KP', 'IR', 'CN'], UA: ['EU', 'US', 'TR'] },
-      control: 58, tension: 82, rung: 6, hot: true,
+      control: 58, tension: 76, rung: 5, hot: true, negotiating: true,
       axisLabel: 'Front-line momentum',
-      brief: 'Attritional ground war along a long static front, with both sides running deep-strike ' +
-        'campaigns against energy and logistics. The binding constraints are manpower and ' +
-        'air-defence interceptors on one side, and munitions throughput and casualty ' +
-        'tolerance on the other.',
+      brief: 'Attritional ground war along a largely static front, now running in parallel with a ' +
+        'live negotiation track: localised ceasefires — Oleshky in Kherson took effect on 27 ' +
+        'October 2026 — and technical talks involving Ukraine, Russia and the United States ' +
+        'convening in Abu Dhabi in early November. Strikes continue elsewhere. Territory and ' +
+        'security guarantees are the unresolved core.',
       drivers: [
         'Western financing and interceptor supply set Ukraine\'s ceiling',
         'Russian advance rates are measured in metres per week at high cost',
         'Both economies are running war-mobilised fiscal policy',
-        'Any NATO force presence inside Ukraine is a declared Russian red line'
+        'Any NATO force presence inside Ukraine is a declared Russian red line',
+        'Local humanitarian pauses have a poor record of generalising to the wider war',
+        'A ceasefire starts an electoral clock in Kyiv that martial law has suspended'
       ],
+      crisisRate: 0.05,   /* quarterly hazard of an unplanned incident */
       rungFloor: 4,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 9,
       nuclearDyad: true,
@@ -39,7 +43,7 @@
       lat: 24.5, lon: 120.5,
       sideA: 'CN', sideB: 'TW', sideALabel: 'Beijing', sideBLabel: 'Taipei + partners',
       backers: { CN: ['RU', 'KP'], TW: ['US', 'JP', 'EU'] },
-      control: 46, tension: 54, rung: 3, hot: false,
+      control: 46, tension: 58, rung: 3, hot: false,
       axisLabel: 'Strait balance of coercion',
       brief: 'Sustained gray-zone pressure — median-line crossings, ADIZ incursions, coast-guard ' +
         'boarding drills, undersea cable interference — designed to normalise coercion below ' +
@@ -48,8 +52,11 @@
         'Advanced semiconductor concentration makes the island a systemic economic node',
         'Amphibious assault remains the hardest operation in modern warfare',
         'US policy is deliberately ambiguous about direct intervention',
-        'Blockade/quarantine is the lower-cost coercive option and the likeliest flashpoint'
+        'Blockade/quarantine is the lower-cost coercive option and the likeliest flashpoint',
+        'October 2026 alone: 166 military aircraft and 309 vessels logged in the Strait',
+        'Coast-guard harassment and cable interference are now routine rather than exceptional'
       ],
+      crisisRate: 0.05,   /* quarterly hazard of an unplanned incident */
       rungFloor: 2,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 9,
       nuclearDyad: true,
@@ -72,6 +79,7 @@
         'Coast guard and maritime militia keep incidents below "armed attack"',
         'A defence-treaty claimant makes miscalculation escalatory'
       ],
+      crisisRate: 0.055,   /* quarterly hazard of an unplanned incident */
       rungFloor: 2,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 7,
       nuclearDyad: false,
@@ -83,21 +91,54 @@
       lat: 32.5, lon: 36.0,
       sideA: 'IL', sideB: 'IR', sideALabel: 'Israel', sideBLabel: 'Iran + partners',
       backers: { IL: ['US'], IR: ['RU'] },
-      control: 62, tension: 76, rung: 5, hot: true,
+      control: 74, tension: 78, rung: 4, hot: true, negotiating: true,
       axisLabel: 'Regional military balance',
-      brief: 'Direct state-on-state exchanges have replaced the old proxy-only pattern: standoff ' +
-        'missile and drone salvos, strikes on nuclear and missile infrastructure, and ' +
-        'degraded but surviving partner militias across four countries.',
+      brief: 'A fragile ceasefire after the war that began on 28 February 2026, mediated by ' +
+        'Pakistan in April and underwritten by a June memorandum in which Iran undertook not ' +
+        'to acquire nuclear weapons. Both sides have since traded strikes over alleged ' +
+        'violations. Iran\'s nuclear infrastructure was heavily damaged and inspectors have ' +
+        'had no access since; roughly 440 kg of enriched uranium is unaccounted for. The core ' +
+        'disputes — the nuclear programme, the Strait of Hormuz, sanctions relief — are all ' +
+        'still open.',
       drivers: [
         'Air superiority and intelligence penetration favour one side decisively',
         'Missile mass and dispersal favour the other in a long exchange',
         'Interceptor stocks are the real constraint on both sides',
-        'Nuclear-programme strikes are the single most escalatory available action'
+        'Nuclear-programme strikes are the single most escalatory available action',
+        'Iran is governed by a three-quarter-old leadership installed after a decapitation strike',
+        'Unaccounted fissile material means capability is uncertain, not demonstrably ended'
       ],
+      crisisRate: 0.06,   /* quarterly hazard of an unplanned incident */
       rungFloor: 3,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 8,
       nuclearDyad: false,
       oilImpact: 0.45, tradeImpact: 0.15
+    },
+
+    LBN: {
+      id: 'LBN', name: 'Lebanon', region: 'Middle East',
+      lat: 33.8, lon: 35.6,
+      sideA: 'IL', sideB: 'IR', sideALabel: 'Israel', sideBLabel: 'Hezbollah + Iran',
+      backers: { IL: ['US'], IR: [] },
+      control: 70, tension: 72, rung: 4, hot: true, negotiating: true,
+      axisLabel: 'Control of the south and the disarmament question',
+      brief: 'Hezbollah opened fire on 2 March 2026 as the wider Iran war began; Israeli ground ' +
+        'operations followed on 16 March. A de jure ceasefire has held since 16 April amid ' +
+        'continuing airstrikes, after more than 4,000 deaths and over a million displaced. A ' +
+        'June trilateral framework set three goals with no timetable attached: Hezbollah ' +
+        'disarms, the Lebanese Armed Forces deploy south, Israeli forces withdraw. Hezbollah ' +
+        'is not party to the talks, and the Lebanese state does not control it.',
+      drivers: [
+        'Hezbollah is badly degraded but intact, and says it will not return to the pre-March position',
+        'Disarmament is the pivot of the framework and the one thing no party can deliver',
+        'The Lebanese state lacks the capacity to occupy what Hezbollah would vacate',
+        'The file is hostage to the wider Iran track: it settles there or not at all'
+      ],
+      crisisRate: 0.05,   /* quarterly hazard of an unplanned incident */
+      rungFloor: 2,
+      escalationCeiling: 7,
+      nuclearDyad: false,
+      oilImpact: 0.06, tradeImpact: 0.03
     },
 
     RED: {
@@ -105,7 +146,7 @@
       lat: 13.5, lon: 43.0,
       sideA: 'US', sideB: 'IR', sideALabel: 'Coalition escorts', sideBLabel: 'Yemen-based forces',
       backers: { US: ['EU', 'IL'], IR: [] },
-      control: 44, tension: 64, rung: 4, hot: true,
+      control: 46, tension: 58, rung: 3, hot: true,
       axisLabel: 'Freedom of commercial navigation',
       brief: 'Anti-ship missile and one-way-drone attacks on commercial traffic, answered by naval ' +
         'escort and strike operations. Cost exchange strongly favours the attacker: cheap ' +
@@ -116,6 +157,7 @@
         'Strikes on launch sites have not restored deterrence',
         'Insurance premiums, not military outcomes, decide when traffic returns'
       ],
+      crisisRate: 0.055,   /* quarterly hazard of an unplanned incident */
       rungFloor: 2,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 6,
       nuclearDyad: false,
@@ -138,6 +180,7 @@
         'Sanctions enforcement has effectively collapsed',
         'Warhead count is small but survivable enough for deterrence'
       ],
+      crisisRate: 0.04,   /* quarterly hazard of an unplanned incident */
       rungFloor: 2,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 9,
       nuclearDyad: true,
@@ -160,6 +203,7 @@
         'Two nuclear powers with no hotline culture of the Cold War kind',
         'Trade normalisation runs in parallel with military hardening'
       ],
+      crisisRate: 0.025,   /* quarterly hazard of an unplanned incident */
       rungFloor: 1,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 7,
       nuclearDyad: true,
@@ -182,6 +226,7 @@
         'Both arsenals include short-range systems that blur the nuclear threshold',
         'Water-sharing arrangements have become an additional coercive lever'
       ],
+      crisisRate: 0.055,   /* quarterly hazard of an unplanned incident */
       rungFloor: 2,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 8,
       nuclearDyad: true,
@@ -204,6 +249,7 @@
         'Migration pressure transmits the conflict directly into European politics',
         'Uranium, gold and cobalt supply chains are downstream of these regimes'
       ],
+      crisisRate: 0.04,   /* quarterly hazard of an unplanned incident */
       rungFloor: 2,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 5,
       nuclearDyad: false,
@@ -226,6 +272,7 @@
         'Attribution for undersea sabotage is slow and usually inconclusive',
         'Critical infrastructure is civilian, unguarded, and everywhere'
       ],
+      crisisRate: 0.035,   /* quarterly hazard of an unplanned incident */
       rungFloor: 1,   /* the structural minimum: this dispute does not disappear */
       escalationCeiling: 7,
       nuclearDyad: true,

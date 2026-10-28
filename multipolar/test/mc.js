@@ -9,7 +9,7 @@ const path = require('path');
 const vm = require('vm');
 
 const root = path.join(__dirname, '..');
-const FILES = ['js/data/powers.js', 'js/data/theaters.js', 'js/data/actions.js', 'js/data/events.js',
+const FILES = ['js/data/powers.js', 'js/data/theaters.js', 'js/data/actions.js', 'js/data/events.js', 'js/data/leaders.js', 'js/data/macro.js',
   'js/engine/core.js', 'js/engine/resolve.js', 'js/engine/ai.js', 'js/engine/turn.js', 'js/engine/sim.js'];
 const sandbox = { self: {}, console, Math, Date, JSON, setTimeout };
 vm.createContext(sandbox);
